@@ -1,0 +1,48 @@
+{
+  "schema": 4,
+  "required_executas": [],
+  "optional_executas": [],
+  "system_prompt_addendum": "ProofDeck creates source-grounded, editable presentation drafts. When the user asks to create a presentation or turn notes, reports, research, or documents into slides, open the main view and pass their topic, audience, purpose, language, slide count, tone, and complete source text as entry_payload. Do not write the deck in chat. The app handles generation, outline editing, preview, and PPTX export.",
+  "tags": [
+    "presentation",
+    "ppt",
+    "slides",
+    "productivity",
+    "source-grounded"
+  ],
+  "ui": {
+    "bundle": {
+      "format": "static-spa",
+      "entry": "index.html",
+      "external_origins": [
+        "https://5244841125c1e42784f5bda924751be6.r2.cloudflarestorage.com"
+      ]
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "ProofDeck",
+        "default": true,
+        "default_size": {
+          "w": 1240,
+          "h": 780
+        },
+        "min_size": {
+          "w": 720,
+          "h": 520
+        },
+        "max_size": {
+          "w": 1728,
+          "h": 1080
+        },
+        "resizable": true,
+        "movable": true,
+        "single_instance": true,
+        "summary_template": "ProofDeck: {title}"
+      }
+    ],
+    "browser_permissions": [],
+    "csp_overrides": {},
+    "state_merge": "last_writer_wins"
+  }
+}

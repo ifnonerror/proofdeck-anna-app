@@ -1,0 +1,12 @@
+{
+  "slug": "proofdeck-ai",
+  "name": "ProofDeck",
+  "tagline": "Turn source material into a decision-ready deck you can edit and present",
+  "description": "Paste meeting notes, a report, or research material. ProofDeck generates a concise, source-grounded presentation with assertion-style slide titles, editable content, speaker notes, and a PowerPoint file you can keep working in.",
+  "category": "productivity",
+  "logo_file": "docs/proofdeck-logo.png",
+  "screenshots": [
+    "docs/proofdeck-ui.png",
+    "docs/proofdeck-real-ai.png"
+  ]
+}

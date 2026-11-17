@@ -1,0 +1,25 @@
+{
+  "name": "proofdeck",
+  "version": "0.1.7",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "A source-grounded AI presentation builder for Anna.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "anna-app dev --no-llm --slug proofdeck",
+    "dev:real": "anna-app dev --slug proofdeck",
+    "dev:mock": "anna-app dev --mock-llm fixtures/llm-deck.jsonl --slug proofdeck",
+    "test": "node --test tests/*.test.mjs",
+    "smoke": "node scripts/smoke-export.mjs",
+    "validate": "anna-app validate --strict",
+    "check": "npm run test && npm run smoke && npm run validate"
+  },
+  "dependencies": {
+    "pptxgenjs": "4.0.1"
+  },
+  "devDependencies": {
+    "@anna-ai/cli": "0.1.64",
+    "jszip": "3.10.2"
+  }
+}

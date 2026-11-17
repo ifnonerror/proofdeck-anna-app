@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="ProofDeck">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16264A"/>
+      <stop offset="1" stop-color="#0B1428"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFDF8"/>
+      <stop offset="1" stop-color="#EDE6D9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <path d="M220 250c0-28 22-50 50-50h484c28 0 50 22 50 50v524c0 28-22 50-50 50H270c-28 0-50-22-50-50V250z"
+        fill="#24375F" opacity=".72" transform="rotate(5 512 512)"/>
+  <path d="M220 250c0-28 22-50 50-50h484c28 0 50 22 50 50v524c0 28-22 50-50 50H270c-28 0-50-22-50-50V250z"
+        fill="url(#paper)"/>
+  <rect x="300" y="300" width="88" height="16" rx="8" fill="#CF6034"/>
+  <rect x="300" y="360" width="424" height="54" rx="18" fill="#172033"/>
+  <rect x="300" y="436" width="334" height="54" rx="18" fill="#172033" opacity=".9"/>
+  <rect x="300" y="548" width="424" height="22" rx="11" fill="#B8B6B1"/>
+  <rect x="300" y="596" width="370" height="22" rx="11" fill="#B8B6B1"/>
+  <rect x="300" y="644" width="398" height="22" rx="11" fill="#B8B6B1"/>
+  <circle cx="694" cy="694" r="104" fill="#CF6034"/>
+  <path d="M646 694l31 31 67-73" fill="none" stroke="#FFFDF8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

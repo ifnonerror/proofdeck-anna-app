@@ -1,0 +1,16 @@
+node_modules/
+.anna/
+out/
+dist/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example
+
+# Internal research and the discarded first scaffold.
+ANNA_AGENT_BUILD_BRIEF.md
+ANNA_PPT_APP_PLAN.md
+ppt-app-plan/
+research-evidence/
