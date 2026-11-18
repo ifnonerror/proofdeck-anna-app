@@ -10,11 +10,11 @@ Environment:
 - App: ProofDeck
 - App ID: `274`
 - Slug: `proofdeck-ai`
-- Review candidate: `v0.2.0` (`version_id=663`)
+- Next review candidate: `v0.2.1`
 
 ## Automated gates
 
-- `npm test`: 24 tests passed.
+- `npm test`: 27 tests passed.
 - `npm run smoke`: produced an eight-slide fallback deck with eight notes and a valid 16:9 package.
 - OfficeKit smoke: produced an eight-slide deck from a real `.pptx`, with shape-aware SVG output.
 - `npm run validate`: Anna schema 4 strict validation passed.
@@ -27,6 +27,8 @@ The OfficeKit tests verify that:
 - The saved file remains a valid PowerPoint package.
 - Rendered slides contain `data-pptx-shape-id` attributes.
 - A patch changes only the requested slide and shape.
+- Free-form non-placeholder body text is cleared instead of leaving stale donor copy.
+- Repeated fixed text and slide chrome outside the content area remain intact.
 
 ## Browser acceptance
 
@@ -34,12 +36,18 @@ Browser acceptance used Microsoft Edge through `playwright-core` and both mock a
 
 | Scenario | Result |
 | --- | --- |
-| Initial sample deck | Passed; 8 slides rendered from PPTX |
+| Initial app state | Passed; single-column chat with no viewer, no deck link, and no advanced settings bar |
+| Model-only composer controls | Passed; the model selector is visible in the composer |
 | PPTX template upload | Passed; slides, layouts, masters, and components reported as loaded |
+| Template upload before generation | Passed; the app stays in chat and does not expose a PPT area |
 | PDF source upload | Passed; selectable text extracted in the browser |
 | DOCX source upload | Passed; document text extracted in the browser |
 | Six-slide AI generation from template | Passed with real Anna model |
 | Mock eight-slide template generation | Passed |
+| Generated presentation link | Passed; title and slide count appear in the conversation |
+| Opening the presentation link | Passed; reveals the left-chat/right-presentation workspace |
+| Returning to chat | Passed; closes the viewer and preserves the generated link |
+| Reload with a completed deck | Passed; restores into chat with the link instead of opening the viewer |
 | Shape inspection and click-to-select | Passed |
 | Selected-element AI patch | Passed with real Anna model |
 | Export after AI patch | Passed; valid PPTX with 8 slides and 8 notes |
@@ -47,22 +55,45 @@ Browser acceptance used Microsoft Edge through `playwright-core` and both mock a
 | 720px minimum layout | Passed; no horizontal overflow |
 | Page errors during end-to-end flows | None |
 
-An automated browser pass covered 12 checks and all passed:
+The final automated browser pass covered the new flow and all checks passed:
 
 ```text
-PASS sample deck renders 8 slides
-PASS PPTX template structure loads
-PASS PDF source extracted
-PASS DOCX source extracted
-PASS mock Anna generates 8 template slides
-PASS exported PPTX has 8 slides and 8 notes: 8/8
-PASS generation flow has no page errors
-PASS slide shape becomes selectable
-PASS AI annotation patches selected shape
-PASS annotation flow has no page errors
-PASS edited deck remains exportable
+PASS initial state has no presentation workspace
+PASS only the model chooser remains in the composer
+PASS template import stays in chat
+PASS generation stays in chat
+PASS generated presentation link appears
+PASS presentation link opens 8 template slides
+PASS stale RRSI body copy is absent
+PASS back to chat closes the workspace
+PASS reload restores into chat with the presentation link
 PASS 720px layout has no horizontal overflow
+PASS no page errors
 ```
+
+## Supplied RRSI template acceptance
+
+The supplied 14-slide deck `RRSI 论文解读：智能体脚手架的正则化递归自进化.pptx` was tested without modifying the source file.
+
+- Slide size: 16:9, `12192000 × 6858000` EMU.
+- Source slides: 14.
+- Layouts: 13.
+- Masters: 2.
+- Themes: 3.
+- Media parts: 15.
+- Fonts: Arial.
+- Body content uses direct text boxes rather than placeholders.
+
+`npm run smoke:template -- "<template path>"` produced an eight-slide deck from the supplied template. All eight slides rendered with shape-aware SVG. Theme, master, and layout parts were byte-for-byte unchanged:
+
+```text
+themes:  3 / 3 unchanged
+masters: 2 / 2 unchanged
+layouts: 13 / 13 unchanged
+OfficeKit package validation: no issues
+```
+
+The previous implementation left captions and body sections from the paper on newly generated slides. The revision now clears donor body copy outside repeated fixed text while preserving images, master artwork, backgrounds, and fixed slide chrome. Browser inspection confirmed that `图 1(a)`, `标准进化循环`, and `风险警示` no longer leaked into the generated deck.
 
 ## Real Anna model runs
 
@@ -94,13 +125,13 @@ GPT-5 Mini, Kimi K2.5, and MiniMax M2.7 exposed mandatory-reasoning errors durin
 
 ## Publishing state
 
-`v0.2.0` was uploaded and cut successfully:
+`v0.2.1` was uploaded and cut successfully:
 
-- Remote working draft revision: `8`.
-- Bundle: 25 files, approximately 3.49 MB.
-- Immutable review version: `v0.2.0`, `version_id=663`.
+- Remote working draft revision: `9`.
+- Bundle: 25 files, approximately 3.44 MB.
+- Immutable review version: `v0.2.1`, `version_id=664`.
 - App status after submission: `pending_review`.
-- Review pin: `v0.2.0`.
+- Review pin: `v0.2.1`.
 
 The Anna web login requires a Cloudflare Turnstile human check in a fresh browser session. The real model acceptance therefore used the same saved Anna PAT and real `anna-runtime` bridge from the App's local Harness. The platform package is installed and pinned for review; a reviewer can install the `0.0.0-draft` version from the Developer Console after human verification.
 

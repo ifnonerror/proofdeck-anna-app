@@ -9,6 +9,10 @@ function textLines(items) {
   return (items || []).map((item) => `${item.text}${sourceSuffix(item.sourceRefs)}`).join("\n");
 }
 
+function normalizedText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
 function shapeInfo(pres, shape) {
   const text = pptx.hasShapeText(shape) ? pptx.getShapeText(shape) : "";
   let format = null;
@@ -92,6 +96,31 @@ function setText(shape, value) {
   }
 }
 
+function clearText(shape) {
+  if (!shape || !pptx.hasShapeText(shape)) return;
+  try {
+    pptx.setShapeText(shape, "", { preserveFormatting: false });
+  } catch {
+    // Some uncommon text-bearing shapes are read-only.
+  }
+}
+
+function fillTargets(targets, lines) {
+  const values = (lines || []).filter(Boolean);
+  if (!targets.length || !values.length) return;
+  const area = (target) => (target.info.bounds?.w || 0) * (target.info.bounds?.h || 0);
+  const largest = targets.reduce((best, target) => area(target) > area(best) ? target : best, targets[0]);
+  const comparable = targets.filter((target) => area(target) >= area(largest) * 0.55);
+  if (values.length > 1 && comparable.length >= 2) {
+    const count = Math.min(values.length, comparable.length);
+    for (let index = 0; index < count; index += 1) {
+      setText(comparable[index].shape, values[index]);
+    }
+    return;
+  }
+  setText(largest.shape, values.join("\n"));
+}
+
 function replaceTokens(slide, data) {
   return pptx.replaceTokensInSlide(slide, {
     title: data.title || "",
@@ -105,53 +134,67 @@ function replaceTokens(slide, data) {
   });
 }
 
-function fillTemplateSlide(pres, slide, data) {
+function fillTemplateSlide(pres, slide, data, fixedTexts) {
   if (replaceTokens(slide, data) > 0) {
-    if (data.notes) pptx.setSlideNotes(slide, data.notes);
+    pptx.setSlideNotes(slide, data.notes || "");
     return slideInfo(pres, slide, 0);
   }
 
   const title = titleShape(pres, slide);
   const content = pickTextShapes(pres, slide).content;
+  const replaceable = content.filter(({ info }) => !fixedTexts.has(normalizedText(info.text)));
+  const titleInfo = title ? shapeInfo(pres, title) : null;
+  const minimumBodySize = Math.min(18, Math.max(11, Number(titleInfo?.fontSize || 0) * 0.4));
+  const targets = replaceable
+    .filter(({ info }) => Number(info.fontSize || 0) >= minimumBodySize)
+    .sort((a, b) => {
+      const yDiff = (a.info.bounds?.y || 0) - (b.info.bounds?.y || 0);
+      return Math.abs(yDiff) > 25400
+        ? yDiff
+        : (a.info.bounds?.x || 0) - (b.info.bounds?.x || 0);
+    });
+
   if (title) setText(title, data.title);
+  replaceable.forEach(({ shape }) => clearText(shape));
 
   if (data.kind === "cover" || data.kind === "closing" || data.kind === "section") {
-    const subtitle = content.find(({ info }) => /subtitle/i.test(String(info.placeholderType || "")))?.shape
-      || content[0]?.shape;
-    if (subtitle) setText(subtitle, data.subtitle || textLines(data.bullets));
+    const subtitle = targets.find(({ info }) => /subtitle/i.test(String(info.placeholderType || "")))
+      || targets[0];
+    if (subtitle?.shape) setText(subtitle.shape, data.subtitle || textLines(data.bullets));
   } else if (data.kind === "comparison") {
     const size = pptx.getSlideSize(pres);
-    const left = content.filter(({ info }) => (info.bounds?.x || 0) < size.width / 2);
-    const right = content.filter(({ info }) => (info.bounds?.x || 0) >= size.width / 2);
+    const left = targets.filter(({ info }) => (info.bounds?.x || 0) < size.width / 2);
+    const right = targets.filter(({ info }) => (info.bounds?.x || 0) >= size.width / 2);
     if (left.length && right.length) {
       setText(left[0]?.shape, [data.leftTitle, ...(data.leftItems || []).map((item) => `${item.text}${sourceSuffix(item.sourceRefs)}`)].join("\n"));
       setText(right[0]?.shape, [data.rightTitle, ...(data.rightItems || []).map((item) => `${item.text}${sourceSuffix(item.sourceRefs)}`)].join("\n"));
-    } else if (content[0]) {
-      setText(content[0].shape, `${data.leftTitle || "A"}\n${textLines(data.leftItems)}\n\n${data.rightTitle || "B"}\n${textLines(data.rightItems)}`);
+    } else if (targets[0]) {
+      setText(targets[0].shape, `${data.leftTitle || "A"}\n${textLines(data.leftItems)}\n\n${data.rightTitle || "B"}\n${textLines(data.rightItems)}`);
     }
   } else if (data.kind === "metrics") {
-    const metrics = data.metrics || [];
-    if (content.length >= metrics.length * 2) {
-      metrics.forEach((metric, index) => {
-        setText(content[index * 2]?.shape, metric.value);
-        setText(content[index * 2 + 1]?.shape, `${metric.label}${sourceSuffix(metric.sourceRefs)}`);
-      });
-    } else {
-      const lines = metrics.map((metric) => `${metric.value}  ${metric.label}${sourceSuffix(metric.sourceRefs)}`);
-      setText(content[0]?.shape, lines.join("\n"));
-    }
-  } else if (content[0]) {
-    setText(content[0].shape, textLines(data.bullets));
+    const lines = (data.metrics || []).map((metric) => `${metric.value}  ${metric.label}${sourceSuffix(metric.sourceRefs)}`);
+    fillTargets(targets, lines);
+  } else {
+    fillTargets(targets, (data.bullets || []).map((item) => `${item.text}${sourceSuffix(item.sourceRefs)}`));
   }
 
-  const used = new Set([title, content[0]?.shape]);
-  for (const { shape } of content.slice(1)) {
-    if (!used.has(shape) && pptx.getShapePlaceholderType(shape)) {
-      pptx.setShapeText(shape, "");
+  pptx.setSlideNotes(slide, data.notes || "");
+  return slideInfo(pres, slide, 0);
+}
+
+function findFixedTexts(pres, slides) {
+  const counts = new Map();
+  for (const slide of slides) {
+    const title = titleShape(pres, slide);
+    for (const shape of pptx.getSlideShapes(slide)) {
+      if (shape === title || !pptx.hasShapeText(shape)) continue;
+      const key = normalizedText(pptx.getShapeText(shape));
+      if (!key) continue;
+      counts.set(key, (counts.get(key) || 0) + 1);
     }
   }
-  if (data.notes) pptx.setSlideNotes(slide, data.notes);
-  return slideInfo(pres, slide, 0);
+  const threshold = Math.max(2, Math.ceil(slides.length * 0.35));
+  return new Set([...counts].filter(([, count]) => count >= threshold).map(([key]) => key));
 }
 
 function chooseDonor(slides, index, kind) {
@@ -182,13 +225,14 @@ export async function buildFromTemplate(templateBytes, deck) {
   const pres = await pptx.loadPresentation(new Uint8Array(templateBytes));
   const original = [...pptx.getSlides(pres)];
   if (!original.length) throw new Error("上传的模板没有可复用页面。");
+  const fixedTexts = findFixedTexts(pres, original);
 
   const generated = [];
   for (let index = 0; index < deck.slides.length; index += 1) {
     const data = deck.slides[index];
     const donor = chooseDonor(original, index, data.kind);
     const slide = pptx.duplicateSlide(pres, donor);
-    generated.push(fillTemplateSlide(pres, slide, data));
+    generated.push(fillTemplateSlide(pres, slide, data, fixedTexts));
   }
   original.forEach((slide) => pptx.removeSlide(pres, slide));
   pptx.compactPackage(pres);

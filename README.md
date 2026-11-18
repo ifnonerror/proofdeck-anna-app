@@ -4,11 +4,13 @@
 
 # ProofDeck
 
-ProofDeck is an Anna App that turns a short brief, source documents, and an optional PowerPoint template into an editable presentation. The interface is chat-first: attach material, describe the deck, review the result in the app, then click a specific slide element and ask Anna to change it.
+ProofDeck is an Anna App that turns a short brief, source documents, and an optional PowerPoint template into an editable presentation. The first screen is a clean chat with one model selector. Attach material, describe the deck, and generate. A presentation link appears in the conversation only after the deck is ready; opening that link enters the split preview and annotation workspace.
 
 ![ProofDeck generating a deck from an uploaded PowerPoint template](docs/proofdeck-ui.png)
 
 ![ProofDeck editing one selected slide element with AI](docs/proofdeck-editing.png)
+
+![ProofDeck reusing a free-form 14-slide PowerPoint template](docs/proofdeck-template-reuse.png)
 
 ## Product idea
 
@@ -25,6 +27,7 @@ The product is intentionally narrow:
 
 - Upload a `.pptx` template and inspect its slide count, layouts, masters, fonts, and components.
 - Upload PDF, DOCX, TXT, and Markdown source files or paste requirements in the prompt.
+- Choose the preferred Anna model directly in the composer. Language, slide count, tone, layout, and writing goals stay in the natural-language prompt.
 - Generate 6, 8, or 10 presentation slides in one Anna `llm.complete` request.
 - Preserve source references such as `S1` and `S2`; invalid model-created references are removed.
 - Browse all generated slides in a filmstrip or full-screen presentation mode.
@@ -33,6 +36,14 @@ The product is intentionally narrow:
 - Export the modified deck as a real PowerPoint file.
 - Restore the current draft from IndexedDB and Anna storage.
 
+## Interaction flow
+
+1. The App opens as a single, full-width conversation. No empty slide canvas or disabled preview is shown.
+2. Template and source files appear as compact attachments inside the composer.
+3. After successful generation, Anna replies with a clickable presentation card showing the deck title and slide count.
+4. Opening the card reveals the existing left-chat/right-presentation workspace.
+5. A back button returns to the conversation without discarding the deck.
+
 ## Template reuse
 
 The browser-side OfficeKit engine performs the template-faithful workflow:
@@ -40,12 +51,15 @@ The browser-side OfficeKit engine performs the template-faithful workflow:
 1. Load the uploaded `.pptx` into its existing package.
 2. Read the real slides, masters, layouts, theme, media, and shape tree.
 3. Clone a donor slide for each generated slide.
-4. Fill title and content placeholders, or fall back to detected text shapes.
-5. Remove the original donor slides while retaining the source presentation infrastructure.
-6. Save the complete package with editable PowerPoint XML and speaker notes.
-7. Render each slide to SVG with shape IDs for in-app preview and selection.
+4. Fill title and content placeholders, or use detected free-form text shapes.
+5. Clear stale donor body copy while retaining repeated fixed text, master elements, media, backgrounds, and non-text components.
+6. Remove the original donor slides while retaining the source presentation infrastructure.
+7. Save the complete package with editable PowerPoint XML and speaker notes.
+8. Render each slide to SVG with shape IDs for in-app preview and selection.
 
-The first template slide is used for the cover, the last for the closing slide, and template body slides are cycled for intermediate content. Existing visual components are duplicated intact. This supports standard PowerPoint shapes, text, images, tables, and themed backgrounds.
+The first template slide is used for the cover, the last for the closing slide, and template body slides are cycled for intermediate content. Existing visual components are duplicated intact. This supports standard PowerPoint shapes, text, images, tables, and themed backgrounds. For templates without placeholders, ProofDeck detects title/body text by position and typography, removes stale donor copy, and distributes generated content across compatible text regions.
+
+The supplied 14-slide RRSI paper deck was used as an acceptance template. It contains 2 masters, 13 layouts, 3 themes, 15 media parts, and free-form text instead of body placeholders. The generated deck retained every theme, master, and layout part byte-for-byte, reused media from the selected donor slides, replaced all tested stale body copy, and passed OfficeKit package validation.
 
 SmartArt, OLE objects, embedded video, and custom animation fidelity depend on the upstream OfficeKit parser and PowerPoint serialization. They should be tested with the organization's actual production templates before deployment.
 
@@ -77,7 +91,7 @@ Generation and annotation requests both display the actual returned model and qu
 - The only automatic retry is a narrow compatibility retry for providers that explicitly require reasoning.
 - Source upload and text extraction happen locally in the browser.
 
-The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance results are recorded separately for `v0.2.0`.
+The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final chat-first flow are recorded for `v0.2.1`.
 
 ## Run locally
 
@@ -117,10 +131,11 @@ The test suite covers:
 - Prompt construction, bounded output, model routing, malformed responses, truncation, quota errors, and source-reference validation.
 - Selected-element patch parsing and rejection of operations targeting other slides or shapes.
 - Model response routing and the mandatory-reasoning compatibility path.
-- Template inspection, slide cloning, PPTX serialization, SVG preview generation, and single-shape patches.
+- Template inspection, slide cloning, stale-copy removal, fixed-text preservation, PPTX serialization, SVG preview generation, and single-shape patches.
 - The fallback PptxGenJS presentation path.
 - PowerPoint ZIP structure, speaker notes, 16:9 geometry, and editable shape XML.
 - Anna schema 4 strict validation.
+- Chat-first startup, hidden initial viewer, deck-link reveal, model-only composer configuration, and return-to-chat behavior.
 
 Browser acceptance also exercises template upload, PDF extraction, DOCX extraction, mock generation, shape selection, AI annotation, export, and responsive layouts. Exact results, quota usage, and known limitations are recorded in [docs/validation.md](docs/validation.md).
 

@@ -7,6 +7,7 @@
   "logo_file": "docs/proofdeck-logo.png",
   "screenshots": [
     "docs/proofdeck-ui.png",
-    "docs/proofdeck-editing.png"
+    "docs/proofdeck-editing.png",
+    "docs/proofdeck-template-reuse.png"
   ]
 }

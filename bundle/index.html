@@ -26,7 +26,7 @@
       </div>
     </header>
 
-    <main class="studio">
+    <main id="studio" class="studio chat-only">
       <section class="chat-panel" aria-label="Create presentation with Anna">
         <div class="chat-scroll">
           <div class="chat-intro">
@@ -58,7 +58,19 @@
                 <button id="attach-sources" class="button subtle" type="button">＋ Source files</button>
                 <button id="load-example" class="text-button" type="button">Use example</button>
               </div>
-              <button id="generate" class="button primary" type="button">Generate deck</button>
+              <div class="composer-submit">
+                <label class="model-picker" for="brief-model">
+                  <span>Model</span>
+                  <select id="brief-model">
+                    <option value="auto">Auto</option>
+                    <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="qwen3.8-flash">Qwen3.8 Flash</option>
+                  </select>
+                </label>
+                <button id="generate" class="button primary" type="button">Generate deck</button>
+              </div>
             </div>
             <input
               id="template-file"
@@ -75,59 +87,18 @@
             />
           </div>
 
-          <details class="advanced-settings">
-            <summary>Advanced defaults</summary>
-            <div class="settings-grid">
-              <label>
-                Language
-                <select id="brief-language">
-                  <option value="auto">From prompt</option>
-                  <option value="zh-CN">中文</option>
-                  <option value="en">English</option>
-                </select>
-              </label>
-              <label>
-                Slides
-                <select id="brief-slides">
-                  <option value="auto">From prompt</option>
-                  <option>6</option>
-                  <option>8</option>
-                  <option>10</option>
-                </select>
-              </label>
-              <label>
-                Tone
-                <select id="brief-tone">
-                  <option value="executive">Executive</option>
-                  <option value="analytical">Analytical</option>
-                  <option value="persuasive">Persuasive</option>
-                  <option value="educational">Educational</option>
-                </select>
-              </label>
-              <label>
-                Model preference
-                <select id="brief-model">
-                  <option value="auto">Auto · platform default</option>
-                  <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
-                  <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                  <option value="gpt-5-mini">GPT-5 Mini</option>
-                  <option value="qwen3.8-flash">Qwen3.8 Flash</option>
-                </select>
-              </label>
-            </div>
-            <p class="model-note">Anna may use your account default. The actual model is shown after generation.</p>
-          </details>
           <p id="generation-status" class="status" role="status" aria-live="polite"></p>
         </div>
       </section>
 
-      <section id="viewer-panel" class="viewer-panel" aria-label="Presentation preview and annotation">
+      <section id="viewer-panel" class="viewer-panel" aria-label="Presentation preview and annotation" hidden>
         <header class="viewer-head">
           <div class="viewer-title">
-            <span class="eyebrow">LIVE PRESENTATION</span>
+            <span class="eyebrow">PRESENTATION</span>
             <h2 id="deck-title-label">Untitled deck</h2>
           </div>
           <div class="viewer-actions">
+            <button id="close-viewer" class="button ghost-dark" type="button">← Back to chat</button>
             <select id="theme-select" aria-label="Presentation theme">
               <option value="executive">Executive</option>
               <option value="minimal">Minimal</option>

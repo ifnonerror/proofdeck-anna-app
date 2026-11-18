@@ -1,6 +1,6 @@
 {
   "name": "proofdeck",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -13,6 +13,7 @@
     "dev:mock": "anna-app dev --mock-llm fixtures/llm-deck.jsonl --slug proofdeck",
     "test": "node --test tests/*.test.mjs",
     "smoke": "node scripts/smoke-export.mjs && node scripts/smoke-office-engine.mjs",
+    "smoke:template": "node scripts/check-template.mjs",
     "validate": "anna-app validate --strict",
     "check": "npm run test && npm run smoke && npm run validate"
   },

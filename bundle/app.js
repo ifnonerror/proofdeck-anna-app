@@ -36,6 +36,10 @@ const state = {
   sources: [],
   selectedShape: null,
   generated: false,
+  workspaceOpen: false,
+  requestedSlideCount: null,
+  requestedLanguage: "",
+  requestedTone: "",
   busy: false,
   saveTimer: null,
   sampleBytes: null,
@@ -110,21 +114,64 @@ function appendMessage(author, text, tone = "") {
   log.scrollTop = log.scrollHeight;
 }
 
+function appendDeckLink() {
+  if (!state.generated || !state.renderedSlides.length) return;
+  const log = $("#conversation");
+  const article = document.createElement("article");
+  article.className = "message assistant";
+  const label = document.createElement("span");
+  label.className = "message-author";
+  label.textContent = "Presentation";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "deck-link";
+  button.setAttribute("aria-label", `Open ${state.deck.title || "presentation"}`);
+  const icon = document.createElement("span");
+  icon.className = "deck-link-icon";
+  icon.textContent = "PPT";
+  const copy = document.createElement("span");
+  copy.className = "deck-link-copy";
+  const title = document.createElement("strong");
+  title.textContent = state.deck.title || "Untitled presentation";
+  const detail = document.createElement("span");
+  detail.textContent = `${state.renderedSlides.length} slides · Open to preview and annotate`;
+  copy.append(title, detail);
+  const arrow = document.createElement("span");
+  arrow.className = "deck-link-arrow";
+  arrow.setAttribute("aria-hidden", "true");
+  arrow.textContent = "→";
+  button.append(icon, copy, arrow);
+  button.addEventListener("click", openWorkspace);
+  article.append(label, button);
+  log.appendChild(article);
+  log.scrollTop = log.scrollHeight;
+}
+
+function openWorkspace() {
+  if (!state.renderedSlides.length) return;
+  state.workspaceOpen = true;
+  renderAll();
+}
+
+function closeWorkspace() {
+  state.workspaceOpen = false;
+  state.selectedShape = null;
+  renderAll();
+}
+
 function sourceText() {
   return state.sources.map((doc) => `[${doc.name}]\n${doc.text}`).join("\n\n");
 }
 
 function inferSlideCount(prompt) {
-  const selected = $("#brief-slides").value;
-  if (selected !== "auto") return Number(selected);
+  if (Number.isFinite(state.requestedSlideCount)) return state.requestedSlideCount;
   const match = String(prompt).match(/(\d{1,2})\s*(?:页|张|slides?|pages?)/i);
   const value = match ? Number(match[1]) : 8;
   return Math.min(10, Math.max(6, value));
 }
 
 function inferLanguage(prompt) {
-  const selected = $("#brief-language").value;
-  if (selected !== "auto") return selected;
+  if (state.requestedLanguage) return state.requestedLanguage;
   const han = (String(prompt).match(/[\u3400-\u9fff]/g) || []).length;
   const latin = (String(prompt).match(/[a-z]/gi) || []).length;
   return han > latin ? "zh-CN" : "en";
@@ -138,7 +185,7 @@ function currentBrief() {
     purpose: "由提示词中的目标信息确定",
     language: inferLanguage(prompt),
     slideCount: inferSlideCount(prompt),
-    tone: $("#brief-tone").value,
+    tone: state.requestedTone || "executive",
     modelHint: $("#brief-model").value,
     theme: $("#theme-select").value || "executive",
     sourceText: sourceText(),
@@ -353,11 +400,17 @@ function renderTemplateSummary() {
 
 function renderAll() {
   renderAttachments();
-  renderTemplateSummary();
-  renderFilmstrip();
-  renderSlidePreview();
-  updateSelectionLabel();
-  updateAnnotationPanel();
+  const viewer = $("#viewer-panel");
+  viewer.hidden = !state.workspaceOpen;
+  $("#studio").classList.toggle("workspace-active", state.workspaceOpen);
+  $("#studio").classList.toggle("chat-only", !state.workspaceOpen);
+  if (state.workspaceOpen) {
+    renderTemplateSummary();
+    renderFilmstrip();
+    renderSlidePreview();
+    updateSelectionLabel();
+    updateAnnotationPanel();
+  }
   $("#export").disabled = !state.pptxBytes || !state.generated;
   $("#theme-select").disabled = Boolean(state.templateInfo);
 }
@@ -395,15 +448,19 @@ async function loadExample(announce = true) {
   state.templateBytes = null;
   state.templateInfo = null;
   state.activeSlideIndex = 0;
+  state.workspaceOpen = false;
   state.generated = true;
   $("#chat-prompt").value = state.prompt;
   $("#theme-select").value = state.deck.theme;
   await renderBytes(await getSampleBytes(), true);
-  if (announce) appendMessage("Anna", "已载入一个可直接浏览和修改的示例。点击页面元素即可继续批注。");
+  if (announce) {
+    appendMessage("Anna", "已载入一份示例演示文稿。打开后可以逐页预览并点击元素批注。");
+    appendDeckLink();
+  }
   scheduleSave();
 }
 
-function newProject() {
+function newProject({ announce = true, persist = true } = {}) {
   state.deck = createDeck({
     title: "Untitled deck",
     slides: [
@@ -421,11 +478,15 @@ function newProject() {
   state.selectedShape = null;
   state.activeSlideIndex = 0;
   state.generated = false;
+  state.workspaceOpen = false;
+  state.requestedSlideCount = null;
+  state.requestedLanguage = "";
+  state.requestedTone = "";
   $("#chat-prompt").value = "";
   $("#conversation").replaceChildren();
-  appendMessage("Anna", "New project started. Upload a template or describe the deck you want to create.");
+  if (announce) appendMessage("Anna", "上传模板和资料，然后直接描述你要生成的演示文稿。");
   renderAll();
-  scheduleSave();
+  if (persist) scheduleSave();
 }
 
 async function importTemplate(file) {
@@ -448,9 +509,10 @@ async function importTemplate(file) {
     state.templateInfo = { ...info, sourceName: file.name };
     state.deck.templateName = file.name;
     state.activeSlideIndex = 0;
-    await renderBytes(bytes, false);
-    appendMessage("Anna", `已读取模板「${file.name}」：${info.slideCount} 页、${info.layouts.length} 个版式。生成时会复用原模板页面和组件。`);
-    setStatus("模板已载入。描述要生成的内容，然后点击 Generate deck。", "success");
+    renderAttachments();
+    appendMessage("Anna", `已读取模板「${file.name}」：${info.slideCount} 页、${info.layouts.length} 个版式，母版、主题和组件已准备好。`);
+    setStatus("模板已就绪。描述内容并生成，完成后会出现在对话里的演示文稿入口中。", "success");
+    scheduleSave();
   } catch (error) {
     setStatus(error?.message || String(error), "error");
   } finally {
@@ -466,6 +528,7 @@ function removeTemplate() {
   state.renderedSlides = [];
   state.pptxBytes = null;
   state.selectedShape = null;
+  state.workspaceOpen = false;
   state.deck.templateName = "";
   renderAll();
   scheduleSave();
@@ -548,11 +611,12 @@ async function generate() {
     const warning = result.warnings.length ? ` ${result.warnings.join("；")}` : "";
     appendMessage(
       "Anna",
-      `已生成 ${result.deck.slides.length} 页。模型：${result.model || "Anna AI"}。${warning} 点击任意页面元素即可继续批注修改。`,
+      `已生成 ${result.deck.slides.length} 页。模型：${result.model || "Anna AI"}。${warning}`,
       result.warnings.length ? "warning" : ""
     );
+    appendDeckLink();
     setStatus(
-      result.warnings.length ? `已生成，需注意：${result.warnings.join("；")}` : "生成完成。点击页面元素继续修改。",
+      result.warnings.length ? `生成完成，需注意：${result.warnings.join("；")}` : "生成完成。打开对话中的演示文稿即可预览和批注。",
       result.warnings.length ? "warning" : "success"
     );
     scheduleSave();
@@ -738,8 +802,12 @@ function applyEntryPayload(payload) {
   if (incomingSource) {
     state.sources = [{ name: "Anna chat context.txt", text: incomingSource, chars: incomingSource.length }];
   }
-  if (payload.slides || payload.slideCount) $("#brief-slides").value = String(payload.slides || payload.slideCount);
-  if (payload.language) $("#brief-language").value = payload.language === "en" ? "en" : "zh-CN";
+  const requestedCount = Number(payload.slides || payload.slideCount);
+  if (Number.isFinite(requestedCount) && requestedCount) {
+    state.requestedSlideCount = Math.min(10, Math.max(6, requestedCount));
+  }
+  if (payload.language) state.requestedLanguage = payload.language === "en" ? "en" : "zh-CN";
+  if (payload.tone) state.requestedTone = String(payload.tone);
   setStatus("Brief received from Anna. Review it, then generate.");
   renderAttachments();
 }
@@ -766,6 +834,7 @@ function bind() {
   $("#generate").addEventListener("click", generate);
   $("#export").addEventListener("click", exportDeck);
   $("#new-project").addEventListener("click", newProject);
+  $("#close-viewer").addEventListener("click", closeWorkspace);
   $("#load-example").addEventListener("click", () => loadExample(true));
   $("#attach-template").addEventListener("click", () => $("#template-file").click());
   $("#attach-sources").addEventListener("click", () => $("#source-files").click());
@@ -817,14 +886,10 @@ function bind() {
 
 async function main() {
   bind();
-  try {
-    await loadExample(false);
-  } catch (error) {
-    setStatus(`示例加载失败：${error?.message || String(error)}`, "error");
-  }
   await connectAnna();
   const restored = await restoreDraft();
-  if (restored) renderAll();
+  if (!restored) newProject({ announce: true, persist: false });
+  if (restored && state.generated && state.renderedSlides.length) appendDeckLink();
   setBusy(false);
   renderAll();
 }
