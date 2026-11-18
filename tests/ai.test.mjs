@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 import {
   buildDeckRequest,
+  buildPptxEditRequest,
   extractJSON,
   formatGenerationError,
   generateDeckWithAnna,
   modelPreferenceSatisfied,
   outputTokenBudget,
+  parsePptxEditReply,
   parseDeckReply,
 } from "../bundle/ai.js";
 import { numberSource } from "../bundle/model.js";
@@ -178,4 +180,32 @@ test("formatGenerationError hides raw HTML for a model gateway outage", () => {
     formatGenerationError(error),
     "Anna 模型网关暂时不可用（HTTP 502）。请几分钟后重试，或切换到其他模型。"
   );
+});
+
+test("PPTX edit replies can only patch the selected shape", () => {
+  const target = { slideIndex: 2, shapeId: 7 };
+  const reply = makeReply(JSON.stringify({
+    reply: "Adjusted the title.",
+    operations: [
+      { slideIndex: 2, shapeId: 7, action: "setTextStyle", fontSize: 28, color: "#C75B39", dx: 999, dy: 999 },
+      { slideIndex: 1, shapeId: 3, action: "replaceText", text: "Wrong target" },
+      { slideIndex: 2, shapeId: 7, action: "move", dx: 100, dy: -20 },
+    ],
+  }));
+  const result = parsePptxEditReply(reply, target);
+  assert.equal(result.operations.length, 2);
+  assert.equal(result.operations[0].fontSize, 28);
+  assert.equal(result.operations[0].dx, undefined);
+  assert.equal(result.operations[0].dy, undefined);
+  assert.equal(result.operations[1].dx, 100);
+});
+
+test("PPTX edit request asks for a targeted JSON patch", () => {
+  const request = buildPptxEditRequest({
+    instruction: "Make the title larger",
+    target: { slideIndex: 0, shapeId: 2, text: "Title", fontSize: 24 },
+  });
+  assert.equal(request.maxTokens, 900);
+  assert.match(request.systemPrompt, /只允许操作/);
+  assert.match(request.messages[0].content, /Make the title larger/);
 });

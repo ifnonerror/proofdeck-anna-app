@@ -1,4 +1,6 @@
-export const THEMES = ["executive", "minimal", "signal"];
+import { normalizeThemeTokens } from "./layout.js";
+
+export const THEMES = ["executive", "minimal", "signal", "custom"];
 export const SLIDE_KINDS = [
   "cover",
   "agenda",
@@ -47,6 +49,8 @@ export function createDeck(overrides = {}) {
     language: "zh-CN",
     sourceText: "",
     sourceUnits: [],
+    templateName: "",
+    customTheme: null,
     slides: [],
     updatedAt: new Date().toISOString(),
     ...overrides,
@@ -68,11 +72,19 @@ export function normalizeRefs(refs, validIds) {
 export function normalizeDeck(input, warnings = []) {
   const validIds = (input.sourceUnits || []).map((unit) => unit.id);
   const slides = Array.isArray(input.slides) ? input.slides : [];
+  const customTheme = normalizeThemeTokens(input.customTheme);
+  const theme = input.theme === "custom" && customTheme
+    ? "custom"
+    : THEMES.includes(input.theme) && input.theme !== "custom"
+      ? input.theme
+      : "executive";
   return createDeck({
     id: input.id || uid("deck"),
     title: clampText(input.title || "Untitled deck", 100),
     subtitle: clampText(input.subtitle || "", 140),
-    theme: THEMES.includes(input.theme) ? input.theme : "executive",
+    theme,
+    customTheme,
+    templateName: clampText(input.templateName || customTheme?.sourceName || "", 120),
     language: input.language === "en" ? "en" : "zh-CN",
     sourceText: String(input.sourceText || ""),
     sourceUnits: validIds.map((id, index) => ({

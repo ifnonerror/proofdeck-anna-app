@@ -10,6 +10,8 @@ export const THEME_TOKENS = {
     titleSize: 40,
     bodySize: 23,
     metaSize: 11,
+    titleFont: "Microsoft YaHei",
+    bodyFont: "Microsoft YaHei",
   },
   minimal: {
     background: "FCFAF5",
@@ -20,6 +22,8 @@ export const THEME_TOKENS = {
     titleSize: 38,
     bodySize: 23,
     metaSize: 11,
+    titleFont: "Microsoft YaHei",
+    bodyFont: "Microsoft YaHei",
   },
   signal: {
     background: "0D1419",
@@ -30,10 +34,34 @@ export const THEME_TOKENS = {
     titleSize: 40,
     bodySize: 23,
     metaSize: 11,
+    titleFont: "Microsoft YaHei",
+    bodyFont: "Microsoft YaHei",
   },
 };
 
-export function themeToken(name) {
+export function normalizeThemeTokens(value) {
+  if (!value || typeof value !== "object") return null;
+  const color = (input, fallback) => (
+    /^[0-9a-f]{6}$/i.test(String(input || "")) ? String(input).toUpperCase() : fallback
+  );
+  const font = (input, fallback) => String(input || fallback).replace(/["\r\n]/g, "").slice(0, 80);
+  return {
+    name: String(value.name || "Imported theme").slice(0, 100),
+    background: color(value.background, THEME_TOKENS.executive.background),
+    foreground: color(value.foreground, THEME_TOKENS.executive.foreground),
+    muted: color(value.muted, THEME_TOKENS.executive.muted),
+    accent: color(value.accent, THEME_TOKENS.executive.accent),
+    card: color(value.card, THEME_TOKENS.executive.card),
+    titleSize: 40,
+    bodySize: 23,
+    metaSize: 11,
+    titleFont: font(value.titleFont, THEME_TOKENS.executive.titleFont),
+    bodyFont: font(value.bodyFont, THEME_TOKENS.executive.bodyFont),
+  };
+}
+
+export function themeToken(name, customTheme = null) {
+  if (name === "custom") return normalizeThemeTokens(customTheme) || THEME_TOKENS.executive;
   return THEME_TOKENS[name] || THEME_TOKENS.executive;
 }
 
@@ -76,11 +104,12 @@ export function regionsFor(kind) {
   };
 }
 
-export function layoutSlide(slide, themeName) {
+export function layoutSlide(slide, themeName, customTheme = null) {
+  const resolvedTheme = themeName === "custom" && !customTheme ? "executive" : themeName;
   return {
     canvas: { ...CANVAS },
-    themeName: THEME_TOKENS[themeName] ? themeName : "executive",
-    tokens: themeToken(themeName),
+    themeName: resolvedTheme === "custom" ? "custom" : (THEME_TOKENS[resolvedTheme] ? resolvedTheme : "executive"),
+    tokens: themeToken(resolvedTheme, customTheme),
     regions: regionsFor(slide.kind),
   };
 }

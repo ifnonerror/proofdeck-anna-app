@@ -29,7 +29,7 @@ export function renderSlidePreview(container, slide, deck) {
   }
   const width = container.clientWidth || 640;
   const scale = width / 1280;
-  const layout = layoutSlide(slide, deck.theme);
+  const layout = layoutSlide(slide, deck.theme, deck.customTheme);
   const t = layout.tokens;
   const root = el("div", `slide-canvas theme-${layout.themeName}`);
   root.style.setProperty("--slide-bg", `#${t.background}`);
@@ -38,6 +38,8 @@ export function renderSlidePreview(container, slide, deck) {
   root.style.setProperty("--slide-accent", `#${t.accent}`);
   root.style.setProperty("--slide-card", `#${t.card}`);
   root.style.setProperty("--slide-scale", String(scale));
+  root.style.setProperty("--slide-title-font", t.titleFont);
+  root.style.setProperty("--slide-body-font", t.bodyFont);
 
   if (slide.kind !== "cover" && slide.kind !== "closing") {
     const line = el("div", "accent-rule");

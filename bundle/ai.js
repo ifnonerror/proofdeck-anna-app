@@ -205,18 +205,106 @@ export function parseDeckReply(reply, expectedCount, sourceUnits) {
 export async function generateDeckWithAnna(anna, brief, sourceUnits) {
   if (!anna?.llm?.complete) throw new Error("当前不是 Anna 运行环境，无法调用模型。");
   const request = buildDeckRequest(brief, sourceUnits);
-  let reply;
+  const reply = await completeWithReasoningFallback(anna, request);
+  return parseDeckReply(reply, request.messages ? Number(brief.slideCount || brief.slides || 8) : 8, sourceUnits);
+}
+
+async function completeWithReasoningFallback(anna, request) {
   try {
-    reply = await anna.llm.complete(request, { timeoutMs: 180000 });
+    return await anna.llm.complete(request, { timeoutMs: 180000 });
   } catch (error) {
     const message = String(error?.message || error || "");
     if (!/Reasoning is mandatory|reasoning.{0,40}cannot be disabled/i.test(message)) {
       throw error;
     }
-    reply = await anna.llm.complete({
+    return anna.llm.complete({
       ...request,
       thinking: { enabled: true, effort: "minimal" },
     }, { timeoutMs: 180000 });
   }
-  return parseDeckReply(reply, request.messages ? Number(brief.slideCount || brief.slides || 8) : 8, sourceUnits);
+}
+
+export function buildPptxEditRequest(context) {
+  return {
+    systemPrompt: [
+      "你是 ProofDeck 的幻灯片局部编辑助手。",
+      "用户已经选中页面中的一个具体元素。只修改该元素，不重排整页，不修改其它元素。",
+      "只输出 JSON，不要 Markdown、不要代码围栏、不要解释。",
+      "JSON 结构：{\"reply\":\"一句简短说明\",\"operations\":[{\"slideIndex\":0,\"shapeId\":2,\"action\":\"replaceText|setTextStyle|move|resize|setFill\",\"text\":\"...\",\"fontSize\":24,\"color\":\"#RRGGBB\",\"bold\":true,\"italic\":false,\"dx\":0,\"dy\":0,\"dw\":0,\"dh\":0}]}。",
+      "setTextStyle 可包含 fontSize、color、font、bold、italic、underline。位置和尺寸使用 EMU。",
+      "如果用户要求改写文字，保留事实含义并优先引用已有来源；不得创造数字或来源编号。",
+      "只允许操作 context.target 中给出的 slideIndex 和 shapeId。",
+    ].join("\n"),
+    messages: [{ role: "user", content: JSON.stringify(context) }],
+    maxTokens: 900,
+    temperature: 0.2,
+    thinking: false,
+  };
+}
+
+function cleanPatchOperation(op, target) {
+  if (!op || typeof op !== "object") return null;
+  if (Number(op.slideIndex) !== Number(target.slideIndex)) return null;
+  if (Number(op.shapeId) !== Number(target.shapeId)) return null;
+  const action = String(op.action || "");
+  if (!["replaceText", "setTextStyle", "move", "resize", "setFill"].includes(action)) return null;
+  const out = { slideIndex: Number(op.slideIndex), shapeId: Number(op.shapeId), action };
+  if (action === "replaceText") {
+    const text = String(op.text || "").trim().slice(0, 1000);
+    if (!text) return null;
+    out.text = text;
+  }
+  if (action === "setTextStyle") {
+    for (const key of ["fontSize"]) {
+      const value = Number(op[key]);
+      if (Number.isFinite(value)) out[key] = value;
+    }
+    if (/^#[0-9a-f]{6}$/i.test(String(op.color || ""))) out.color = String(op.color);
+    if (typeof op.font === "string" && op.font.trim()) out.font = op.font.trim().slice(0, 80);
+    for (const key of ["bold", "italic", "underline"]) {
+      if (typeof op[key] === "boolean") out[key] = op[key];
+    }
+  }
+  if (action === "move") {
+    out.dx = Number(op.dx) || 0;
+    out.dy = Number(op.dy) || 0;
+  }
+  if (action === "resize") {
+    out.dw = Number(op.dw) || 0;
+    out.dh = Number(op.dh) || 0;
+  }
+  if (action === "setFill" && /^#[0-9a-f]{6}$/i.test(String(op.color || ""))) {
+    out.color = String(op.color);
+  }
+  return out;
+}
+
+export function parsePptxEditReply(reply, target) {
+  if (!reply || typeof reply !== "object") throw new Error("Anna AI 没有返回有效修改。");
+  if (reply.stopReason === "maxTokens") throw new Error("修改说明太长，请缩小修改范围后重试。");
+  const text = String(reply.content?.text || "").trim();
+  let raw;
+  try {
+    raw = extractJSON(text);
+  } catch {
+    throw new Error("Anna AI 返回的修改指令无法解析。请换一种说法后重试。");
+  }
+  const operations = (Array.isArray(raw?.operations) ? raw.operations : [])
+    .map((op) => cleanPatchOperation(op, target))
+    .filter(Boolean)
+    .slice(0, 8);
+  if (!operations.length) throw new Error("Anna AI 没有生成可执行的修改。请描述得更具体一些。");
+  return {
+    reply: String(raw.reply || "已完成修改。").slice(0, 300),
+    operations,
+    model: String(reply.model || ""),
+    quotaConsumed: Number(reply?._meta?.quotaConsumed || 0),
+  };
+}
+
+export async function planPptxEdit(anna, context) {
+  if (!anna?.llm?.complete) throw new Error("当前没有连接 Anna AI。");
+  const request = buildPptxEditRequest(context);
+  const reply = await completeWithReasoningFallback(anna, request);
+  return parsePptxEditReply(reply, context.target);
 }

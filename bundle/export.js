@@ -39,7 +39,7 @@ export function buildPresentation(deck, PptxGenJS) {
   pptx.company = "ProofDeck";
 
   for (const slide of deck.slides || []) {
-    const layout = layoutSlide(slide, deck.theme);
+    const layout = layoutSlide(slide, deck.theme, deck.customTheme);
     const t = layout.tokens;
     const out = pptx.addSlide();
     out.background = { color: t.background };
@@ -57,7 +57,7 @@ export function buildPresentation(deck, PptxGenJS) {
       const kicker = box(layout.regions.kicker);
       out.addText(slide.kind === "cover" ? "PROOFDECK · DECISION BRIEF" : "NEXT DECISION", {
         ...kicker,
-        fontFace: "Arial",
+        fontFace: t.bodyFont,
         fontSize: pointSize(t.metaSize),
         bold: true,
         color: t.accent,
@@ -66,7 +66,7 @@ export function buildPresentation(deck, PptxGenJS) {
       const title = box(layout.regions.title);
       out.addText(slide.title || "", {
         ...title,
-        fontFace: "Microsoft YaHei",
+        fontFace: t.titleFont,
         fontSize: pointSize(t.titleSize),
         bold: true,
         color: t.foreground,
@@ -78,7 +78,7 @@ export function buildPresentation(deck, PptxGenJS) {
         const subtitle = box(layout.regions.subtitle);
         out.addText(slide.subtitle, {
           ...subtitle,
-          fontFace: "Microsoft YaHei",
+          fontFace: t.bodyFont,
           fontSize: pointSize(t.bodySize),
           color: t.muted,
           valign: "top",
@@ -89,7 +89,7 @@ export function buildPresentation(deck, PptxGenJS) {
       const title = box(layout.regions.title);
       out.addText(slide.title || "", {
         ...title,
-        fontFace: "Microsoft YaHei",
+        fontFace: t.titleFont,
         fontSize: pointSize(t.titleSize),
         bold: true,
         color: t.foreground,
@@ -122,7 +122,7 @@ export function buildPresentation(deck, PptxGenJS) {
             y: b.y + 0.16,
             w: b.w - 0.32,
             h: b.h - 0.32,
-            fontFace: "Microsoft YaHei",
+            fontFace: t.bodyFont,
             fontSize: pointSize(t.bodySize),
             color: t.foreground,
             valign: "top",
@@ -177,7 +177,7 @@ export function buildPresentation(deck, PptxGenJS) {
             y: body.y,
             w: cardW,
             h: body.h * 0.68,
-            fontFace: "Microsoft YaHei",
+            fontFace: t.bodyFont,
             valign: "middle",
             fit: "shrink",
           });
@@ -188,7 +188,7 @@ export function buildPresentation(deck, PptxGenJS) {
         if (lines.length) {
           out.addText(lines, {
             ...body,
-            fontFace: "Microsoft YaHei",
+            fontFace: t.bodyFont,
             fontSize: pointSize(t.bodySize),
             color: t.foreground,
             valign: "top",
@@ -204,7 +204,7 @@ export function buildPresentation(deck, PptxGenJS) {
       const footer = box(layout.regions.footer);
       out.addText(`Sources: ${refs.join(" · ")}`, {
         ...footer,
-        fontFace: "Microsoft YaHei",
+        fontFace: t.bodyFont,
         fontSize: pointSize(t.metaSize),
         color: t.muted,
         align: "right",
@@ -231,7 +231,7 @@ export function safeFilename(title) {
   return `${cleaned || "proofdeck"}.pptx`;
 }
 
-function browserDownload(buffer, filename) {
+export function browserDownload(buffer, filename) {
   const blob = new Blob([buffer], { type: PPTX_MIME });
   const href = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -252,44 +252,48 @@ export function isUnavailableFileBridge(error) {
     || message.includes("not implemented");
 }
 
-export async function exportPresentation({ anna, deck, PptxGenJS }) {
-  const buffer = await createPptxArrayBuffer(deck, PptxGenJS);
-  const filename = safeFilename(deck.title);
-
+export async function deliverPptxBuffer({ anna, buffer, filename, deckId = "deck" }) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   if (!anna?.files?.upload_init || !anna?.files?.download) {
-    browserDownload(buffer, filename);
-    return { mode: "local", filename, bytes: buffer.byteLength };
+    browserDownload(bytes, filename);
+    return { mode: "local", filename, bytes: bytes.byteLength };
   }
 
-  const path = `exports/${deck.id || Date.now()}/${Date.now()}-${filename}`;
+  const path = `exports/${deckId || Date.now()}/${Date.now()}-${filename}`;
   try {
     const upload = await anna.files.upload_init({
       path,
       content_type: PPTX_MIME,
-      size: buffer.byteLength,
+      size: bytes.byteLength,
     });
     const response = await fetch(upload.put_url, {
       method: "PUT",
       headers: upload.headers || { "Content-Type": PPTX_MIME },
-      body: buffer,
+      body: bytes,
     });
     if (!response.ok) throw new Error(`文件上传失败（HTTP ${response.status}）`);
     const etag = response.headers.get("etag") || upload.etag;
     await anna.files.upload_finalize({
       path,
       ...(etag ? { etag } : {}),
-      size_bytes: buffer.byteLength,
+      size_bytes: bytes.byteLength,
     });
     await anna.files.download({ path, filename });
-    return { mode: "anna", filename, bytes: buffer.byteLength, path };
+    return { mode: "anna", filename, bytes: bytes.byteLength, path };
   } catch (error) {
     if (!isUnavailableFileBridge(error)) throw error;
-    browserDownload(buffer, filename);
+    browserDownload(bytes, filename);
     return {
       mode: "local",
       filename,
-      bytes: buffer.byteLength,
+      bytes: bytes.byteLength,
       bridgeFallback: true,
     };
   }
+}
+
+export async function exportPresentation({ anna, deck, PptxGenJS }) {
+  const buffer = await createPptxArrayBuffer(deck, PptxGenJS);
+  const filename = safeFilename(deck.title);
+  return deliverPptxBuffer({ anna, buffer, filename, deckId: deck.id });
 }
