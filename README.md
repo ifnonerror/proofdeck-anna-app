@@ -30,12 +30,13 @@ The product is intentionally narrow:
 - Upload a `.pptx` template and inspect its slide count, layouts, masters, fonts, and components.
 - Generate without a template and use ProofDeck's built-in presentation layout.
 - Upload PDF, DOCX, TXT, and Markdown source files or paste requirements in the prompt.
-- Choose the preferred Anna model directly in the composer. Language, slide count, tone, layout, and writing goals stay in the natural-language prompt.
+- See the model selected in Anna account settings and open those settings from the composer. Language, slide count, tone, layout, and writing goals stay in the natural-language prompt.
 - Create and switch between independent tasks. Each task retains its own conversation, prompt, attachments, generated deck, and preview state.
 - Generate 6, 8, or 10 presentation slides in one Anna `llm.complete` request.
 - Preserve source references such as `S1` and `S2`; invalid model-created references are removed.
 - Browse all generated slides in a filmstrip or full-screen presentation mode.
 - Click a title, text block, or supported shape to select it.
+- Edit selected text, font size, color, bold, and italic directly in the web app without using model quota.
 - Ask for text replacement, font size, color, font family, bold, italic, underline, movement, resize, or fill changes.
 - Export the modified deck as a real PowerPoint file.
 - Restore the current draft from IndexedDB and Anna storage.
@@ -74,6 +75,8 @@ The preview maps each rendered SVG element to its PowerPoint shape ID. Selecting
 
 Anna returns JSON operations restricted to the selected `slideIndex` and `shapeId`. The client validates the patch, rejects any operation aimed at another element, applies it through OfficeKit, re-renders the deck, and updates the downloadable PowerPoint package. The model never supplies executable HTML or a new slide layout.
 
+For direct manual edits, the same panel exposes text, font size, color, bold, and italic controls. Those changes are written locally through OfficeKit and do not call Anna.
+
 ## Anna integration
 
 ProofDeck is a schema 4 static SPA with no custom Executa backend.
@@ -88,6 +91,8 @@ ProofDeck is a schema 4 static SPA with no custom Executa backend.
 
 Generation and annotation requests both display the actual returned model and quota when Anna provides them. The account-level model remains authoritative; the UI model selector is a preference, not a guarantee.
 
+Anna's Host API intentionally treats `modelPreferences` as advisory: the user's own model selection always overrides an App's hints. ProofDeck therefore does not present a fake per-request model switcher. Its model button shows the active model and links to Anna's model settings.
+
 ## Quota discipline
 
 - A normal deck uses one model call. Local template parsing, preview, selection, export, theme changes, and draft restore do not consume quota.
@@ -96,7 +101,7 @@ Generation and annotation requests both display the actual returned model and qu
 - The only automatic retry is a narrow compatibility retry for providers that explicitly require reasoning.
 - Source upload and text extraction happen locally in the browser.
 
-The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final multi-task chat flow are recorded for `v0.2.4`.
+The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final multi-task chat flow are recorded for `v0.2.5`.
 
 ## Run locally
 

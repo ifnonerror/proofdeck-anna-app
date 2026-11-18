@@ -66,16 +66,11 @@
                 <button id="load-example" class="text-button" type="button">Use example</button>
               </div>
               <div class="composer-submit">
-                <label class="model-picker" for="brief-model">
+                <button id="model-settings" class="model-picker" type="button" title="Choose the default model in Anna settings">
                   <span>Model</span>
-                  <select id="brief-model">
-                    <option value="auto">Auto</option>
-                    <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
-                    <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                    <option value="gpt-5-mini">GPT-5 Mini</option>
-                    <option value="qwen3.8-flash">Qwen3.8 Flash</option>
-                  </select>
-                </label>
+                  <strong id="current-model-label">MiMo v2.5</strong>
+                  <small>Change in Anna</small>
+                </button>
                 <button id="generate" class="button primary" type="button">Generate deck</button>
               </div>
             </div>
@@ -140,7 +135,8 @@
           <div class="selection-copy">
             <span class="selection-label">SELECTED ELEMENT</span>
             <strong id="selected-shape-name">Click any element in the slide</strong>
-            <span id="selected-shape-text">Then describe the change for Anna.</span>
+            <span id="selected-shape-text">Use AI annotation or edit the text manually.</span>
+            <button id="manual-edit-toggle" class="manual-edit-toggle" type="button" disabled>Edit manually</button>
           </div>
           <div class="annotation-input-row">
             <label class="sr-only" for="annotation-input">Ask Anna to change the selected element</label>
@@ -150,6 +146,29 @@
               placeholder="例如：标题字号大一点，换成模板强调色；或把这段话改得更简洁。"
             ></textarea>
             <button id="apply-annotation" class="button accent" type="button">Apply with AI</button>
+          </div>
+          <div id="manual-edit-panel" class="manual-edit-panel" hidden>
+            <label class="manual-text-field">
+              <span>Text</span>
+              <textarea id="manual-text" rows="2"></textarea>
+            </label>
+            <label>
+              <span>Size</span>
+              <input id="manual-size" type="number" min="6" max="120" step="1" />
+            </label>
+            <label>
+              <span>Color</span>
+              <input id="manual-color" type="color" value="#C95E38" />
+            </label>
+            <label class="manual-check">
+              <input id="manual-bold" type="checkbox" />
+              <span>Bold</span>
+            </label>
+            <label class="manual-check">
+              <input id="manual-italic" type="checkbox" />
+              <span>Italic</span>
+            </label>
+            <button id="apply-manual-edit" class="button accent" type="button">Apply changes</button>
           </div>
           <div class="quick-actions">
             <button class="quick-chip" type="button" data-annotation="这个元素更醒目一些">更醒目</button>

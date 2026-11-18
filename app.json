@@ -2,7 +2,7 @@
   "slug": "proofdeck-ai",
   "name": "ProofDeck",
   "tagline": "Chat with AI to turn your template and source material into a polished deck",
-  "description": "Create and switch between independent AI presentation tasks in a Codex-style workspace. Upload a PowerPoint template and PDF, Word, text, or Markdown sources, then describe the deck you need. ProofDeck reuses the template's slides, masters, layouts, fonts, colors, and fixed components; generates editable PowerPoint content; previews every slide; and lets you click one element to request a focused AI edit.",
+  "description": "Create and switch between independent AI presentation tasks in a Codex-style workspace. Upload a PowerPoint template and PDF, Word, text, or Markdown sources, then describe the deck you need. ProofDeck reuses the template's slides, masters, layouts, fonts, colors, and fixed components; generates editable PowerPoint content; supports direct text formatting and focused AI edits; and exports a presentation you can keep working in.",
   "category": "productivity",
   "logo_file": "docs/proofdeck-logo.png",
   "screenshots": [

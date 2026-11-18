@@ -19,7 +19,8 @@ test("chat starts without exposing the presentation workspace", () => {
 
 test("only the model chooser remains in the composer", () => {
   assert.doesNotMatch(html, /advanced-settings|brief-slides|brief-language|brief-tone/);
-  assert.match(html, /class="model-picker"[\s\S]+id="brief-model"/);
+  assert.match(html, /id="model-settings" class="model-picker"/);
+  assert.doesNotMatch(html, />Auto</);
   assert.match(html, /PPT template \(optional\)/);
 });
 
@@ -40,6 +41,14 @@ test("task sidebar supports switching independently persisted projects", () => {
 test("slide thumbnails reserve their full aspect-ratio height", () => {
   assert.match(styles, /\.slide-filmstrip\s*\{[\s\S]*grid-auto-rows:\s*max-content/);
   assert.match(styles, /\.filmstrip-item\s*\{[\s\S]*height:\s*auto[\s\S]*aspect-ratio:\s*16\s*\/\s*9/);
+});
+
+test("selected text shapes expose a direct manual editor", () => {
+  assert.match(html, /id="manual-edit-panel"/);
+  assert.match(html, /id="manual-text"/);
+  assert.match(html, /id="apply-manual-edit"/);
+  assert.match(app, /async function applyManualEdit/);
+  assert.match(app, /action: "setTextStyle"/);
 });
 
 test("generation warnings are summarized instead of printed as a list", () => {

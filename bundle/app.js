@@ -47,6 +47,7 @@ const state = {
   requestedSlideCount: null,
   requestedLanguage: "",
   requestedTone: "",
+  modelHint: "xiaomi/mimo-v2.5",
   busy: false,
   saveTimer: null,
   sampleBytes: null,
@@ -202,6 +203,13 @@ function goHome() {
   else $("#chat-prompt").focus();
 }
 
+function openModelSettings() {
+  const url = /(^|\.)anna\.partners$/i.test(location.hostname)
+    ? `${location.origin}/llm`
+    : "https://staging.anna.partners/llm";
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 function sourceText() {
   return state.sources.map((doc) => `[${doc.name}]\n${doc.text}`).join("\n\n");
 }
@@ -229,7 +237,7 @@ function currentBrief() {
     language: inferLanguage(prompt),
     slideCount: inferSlideCount(prompt),
     tone: state.requestedTone || "executive",
-    modelHint: $("#brief-model").value,
+    modelHint: state.modelHint,
     theme: $("#theme-select").value || "executive",
     sourceText: sourceText(),
   };
@@ -241,6 +249,8 @@ function setBusy(busy, label = "") {
   $("#new-project").disabled = busy;
   $("#attach-template").disabled = busy;
   $("#attach-sources").disabled = busy;
+  $("#manual-edit-toggle").disabled = busy || !state.selectedShape?.text;
+  $("#apply-manual-edit").disabled = busy;
   $("#apply-annotation").disabled = busy || !state.selectedShape || !state.generated || !state.anna;
   document.querySelectorAll(".task-item").forEach((button) => {
     button.disabled = busy;
@@ -353,6 +363,7 @@ function resetTaskState({ announce = true, taskId = createTaskId() } = {}) {
   state.requestedSlideCount = null;
   state.requestedLanguage = "";
   state.requestedTone = "";
+  state.modelHint = "xiaomi/mimo-v2.5";
   state.messages = announce ? [{ author: "Anna", text: WELCOME_MESSAGE, tone: "" }] : [];
   $("#chat-prompt").value = "";
   renderConversation();
@@ -374,6 +385,8 @@ async function applyTaskRecord(record) {
   state.requestedSlideCount = Number(record.requestedSlideCount) || null;
   state.requestedLanguage = String(record.requestedLanguage || "");
   state.requestedTone = String(record.requestedTone || "");
+  state.modelHint = String(record.modelHint || "xiaomi/mimo-v2.5");
+  setText($("#current-model-label"), state.modelHint);
   state.messages = Array.isArray(record.messages) && record.messages.length
     ? record.messages.map((message) => ({
       author: message.author === "You" ? "You" : "Anna",
@@ -436,10 +449,22 @@ function updateAnnotationPanel() {
     $("#selected-shape-text"),
     selected
       ? (selected.text || `${selected.kind || "Shape"} · ${Math.round((selected.bounds?.w || 0) / 12700)} × ${Math.round((selected.bounds?.h || 0) / 12700)} pt`)
-      : "Then describe the change for Anna."
+      : "Use AI annotation or edit the text manually."
   );
   $("#apply-annotation").disabled = !selected || !state.generated || state.busy || !state.anna;
   $("#annotation-input").disabled = !selected || !state.generated || state.busy;
+  const editableText = Boolean(selected?.text);
+  $("#manual-edit-toggle").disabled = !editableText || state.busy;
+  if (!editableText) $("#manual-edit-panel").hidden = true;
+  if (editableText) {
+    $("#manual-text").value = selected.text || "";
+    $("#manual-size").value = String(Math.round(Number(selected.fontSize || 18)));
+    $("#manual-color").value = /^#[0-9a-f]{6}$/i.test(String(selected.color || ""))
+      ? selected.color
+      : "#C95E38";
+    $("#manual-bold").checked = Boolean(selected.bold);
+    $("#manual-italic").checked = Boolean(selected.italic);
+  }
 }
 
 function selectShape(shapeId, element = null) {
@@ -453,6 +478,66 @@ function selectShape(shapeId, element = null) {
     || preview.querySelector(`[data-pptx-shape-id="${Number(shapeId)}"]`);
   target?.classList.add("shape-selected");
   updateAnnotationPanel();
+}
+
+async function applyManualEdit() {
+  if (!state.selectedShape || !state.pptxBytes) return;
+  const target = { ...state.selectedShape };
+  const text = $("#manual-text").value.trim();
+  if (!text) {
+    setStatus("文字内容不能为空。", "error");
+    return;
+  }
+  const fontSize = Number($("#manual-size").value);
+  const color = $("#manual-color").value.toUpperCase();
+  const bold = $("#manual-bold").checked;
+  const italic = $("#manual-italic").checked;
+  const operations = [];
+  if (text !== String(target.text || "")) {
+    operations.push({
+      slideIndex: target.slideIndex,
+      shapeId: target.shapeId,
+      action: "replaceText",
+      text,
+    });
+  }
+  if (
+    fontSize !== Number(target.fontSize || 0)
+    || color !== String(target.color || "").toUpperCase()
+    || bold !== Boolean(target.bold)
+    || italic !== Boolean(target.italic)
+  ) {
+    operations.push({
+      slideIndex: target.slideIndex,
+      shapeId: target.shapeId,
+      action: "setTextStyle",
+      fontSize,
+      color,
+      bold,
+      italic,
+    });
+  }
+  if (!operations.length) {
+    setStatus("没有需要应用的修改。");
+    return;
+  }
+  setBusy(true, "正在应用手动修改…");
+  try {
+    const engine = await loadOfficeEngine();
+    const patched = await engine.applyPptxPatch(state.pptxBytes, operations);
+    state.pptxBytes = patched.bytes;
+    state.renderedSlides = patched.slides;
+    state.generated = true;
+    renderFilmstrip();
+    renderSlidePreview();
+    selectShape(target.shapeId);
+    setStatus("已直接在网页中更新选中元素。", "success");
+    scheduleSave();
+  } catch (error) {
+    setStatus(`手动修改失败：${error?.message || String(error)}`, "error");
+  } finally {
+    setBusy(false);
+  }
 }
 
 function renderSlidePreview() {
@@ -760,6 +845,8 @@ async function generate() {
     result.deck.sourceText = brief.sourceText;
     result.deck.language = brief.language;
     state.deck = result.deck;
+    state.modelHint = result.model || state.modelHint;
+    setText($("#current-model-label"), state.modelHint);
     state.activeSlideIndex = 0;
     state.selectedShape = null;
     touchTask();
@@ -897,6 +984,7 @@ async function saveDraft() {
     requestedSlideCount: state.requestedSlideCount,
     requestedLanguage: state.requestedLanguage,
     requestedTone: state.requestedTone,
+    modelHint: state.modelHint,
     messages: clone(state.messages),
     savedAt: new Date().toISOString(),
   };
@@ -1029,6 +1117,7 @@ function bind() {
   $("#export").addEventListener("click", exportDeck);
   $("#new-project").addEventListener("click", newProject);
   $("#home-button").addEventListener("click", goHome);
+  $("#model-settings").addEventListener("click", openModelSettings);
   $("#close-viewer").addEventListener("click", closeWorkspace);
   $("#chat-prompt").addEventListener("input", (event) => {
     state.prompt = event.target.value;
@@ -1061,6 +1150,11 @@ function bind() {
     if (!document.fullscreenElement) $("#viewer-panel").requestFullscreen?.();
     else document.exitFullscreen?.();
   });
+  $("#manual-edit-toggle").addEventListener("click", () => {
+    const panel = $("#manual-edit-panel");
+    panel.hidden = !panel.hidden;
+  });
+  $("#apply-manual-edit").addEventListener("click", applyManualEdit);
   $("#apply-annotation").addEventListener("click", applyAnnotation);
   document.querySelectorAll("[data-annotation]").forEach((button) => {
     button.addEventListener("click", () => {

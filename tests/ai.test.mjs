@@ -66,7 +66,9 @@ test("buildDeckRequest uses one bounded call and includes source units", () => {
 test("buildDeckRequest forwards a selected model preference", () => {
   const request = buildDeckRequest({ ...brief, modelHint: "claude-sonnet-4.5" }, []);
   assert.deepEqual(request.modelPreferences.hints, [
-    { family: "claude", name: "Claude Sonnet 4.5" },
+    { modelName: "anthropic/claude-sonnet-4.5" },
+    { name: "Claude Sonnet 4.5" },
+    { family: "claude" },
   ]);
   assert.equal(request.modelPreferences.intelligencePriority, 0.8);
 });

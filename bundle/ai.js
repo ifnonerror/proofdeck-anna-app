@@ -2,26 +2,51 @@ import { normalizeDeck, numberSource, SLIDE_KINDS } from "./model.js";
 
 export const MAX_OUTPUT_TOKENS = 5600;
 export const MODEL_PREFERENCES = {
+  "xiaomi/mimo-v2.5": {
+    hints: [
+      { modelName: "xiaomi/mimo-v2.5" },
+      { name: "MiMo-V2.5" },
+      { family: "mimo" },
+    ],
+    costPriority: 0.95,
+  },
   "claude-sonnet-4.5": {
-    hints: [{ family: "claude", name: "Claude Sonnet 4.5" }],
+    hints: [
+      { modelName: "anthropic/claude-sonnet-4.5" },
+      { name: "Claude Sonnet 4.5" },
+      { family: "claude" },
+    ],
     intelligencePriority: 0.8,
   },
   "gemini-3.5-flash": {
-    hints: [{ family: "gemini", name: "Gemini 3.5 Flash" }],
+    hints: [
+      { modelName: "google/gemini-3.5-flash" },
+      { name: "Gemini 3.5 Flash" },
+      { family: "gemini" },
+    ],
     speedPriority: 0.7,
   },
   "gpt-5-mini": {
-    hints: [{ family: "gpt", name: "GPT-5 Mini" }],
+    hints: [
+      { modelName: "openai/gpt-5-mini" },
+      { name: "GPT-5 Mini" },
+      { family: "gpt" },
+    ],
     speedPriority: 0.8,
     costPriority: 0.6,
   },
   "qwen3.8-flash": {
-    hints: [{ family: "qwen", name: "Qwen3.8 Flash" }],
+    hints: [
+      { modelName: "qwen3.8-flash" },
+      { name: "Qwen3.8 Flash" },
+      { family: "qwen" },
+    ],
     costPriority: 0.9,
   },
 };
 
 const MODEL_FAMILIES = {
+  "xiaomi/mimo-v2.5": /mimo/i,
   "claude-sonnet-4.5": /claude/i,
   "gemini-3.5-flash": /gemini/i,
   "gpt-5-mini": /gpt/i,
