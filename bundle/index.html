@@ -11,22 +11,29 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">
+      <button id="home-button" class="brand" type="button" aria-label="Return to ProofDeck chat">
         <span class="brand-mark" aria-hidden="true">P</span>
         <div>
           <strong>ProofDeck</strong>
           <span>AI presentation studio</span>
         </div>
-      </div>
-      <div class="project-label" id="project-label">Untitled project</div>
-      <div class="topbar-actions">
-        <span id="mode-badge" class="badge">Fixture preview</span>
-        <span id="quota-badge" class="badge" hidden></span>
-        <button id="new-project" class="button ghost" type="button">New project</button>
-      </div>
+      </button>
     </header>
 
-    <main id="studio" class="studio chat-only">
+    <div class="app-body">
+      <aside class="task-sidebar" aria-label="Presentation tasks">
+        <div class="task-sidebar-head">
+          <div>
+            <span class="eyebrow">TASKS</span>
+            <strong>Presentations</strong>
+          </div>
+          <button id="new-project" class="new-task-button" type="button" aria-label="New presentation task">＋</button>
+        </div>
+        <nav id="task-list" class="task-list" aria-label="Recent presentations"></nav>
+        <p class="task-sidebar-note">Each task keeps its own conversation, template and deck.</p>
+      </aside>
+
+      <main id="studio" class="studio chat-only">
       <section class="chat-panel" aria-label="Create presentation with Anna">
         <div class="chat-scroll">
           <div class="chat-intro">
@@ -151,7 +158,8 @@
           </div>
           <p id="export-status" class="status" role="status" aria-live="polite"></p>
         </section>
-      </section>
-    </main>
+        </section>
+      </main>
+    </div>
   </body>
 </html>

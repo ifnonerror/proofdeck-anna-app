@@ -20,12 +20,19 @@ import {
 } from "./export.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
-const STORAGE_KEY = "proofdeck:current-project:v2";
+const STORAGE_KEY = "proofdeck:current-project:v3";
 const DB_NAME = "proofdeck-studio";
 const DB_STORE = "projects";
+const TASK_STORAGE_PREFIX = "task:";
+const TASK_LIST_KEY = "task-list";
+const ACTIVE_TASK_KEY = "active-task";
+const WELCOME_MESSAGE = "上传模板和资料，然后直接描述你要生成的演示文稿。";
 
 const state = {
   anna: null,
+  taskId: "",
+  tasks: [],
+  messages: [],
   deck: clone(FIXTURE_DECK),
   prompt: SAMPLE_BRIEF.topic,
   activeSlideIndex: 0,
@@ -117,23 +124,30 @@ function summarizeGenerationWarnings(warnings = []) {
   return messages.join("；");
 }
 
-function appendMessage(author, text, tone = "") {
+function renderMessage(message) {
   const log = $("#conversation");
   const article = document.createElement("article");
-  article.className = `message ${author === "You" ? "user" : "assistant"} ${tone}`.trim();
+  article.className = `message ${message.author === "You" ? "user" : "assistant"} ${message.tone || ""}`.trim();
   const label = document.createElement("span");
   label.className = "message-author";
-  label.textContent = author;
+  label.textContent = message.author;
   const body = document.createElement("p");
-  body.textContent = text;
+  body.textContent = message.text;
   article.append(label, body);
   log.appendChild(article);
   log.scrollTop = log.scrollHeight;
 }
 
+function appendMessage(author, text, tone = "") {
+  const message = { author, text, tone };
+  state.messages.push(message);
+  renderMessage(message);
+}
+
 function appendDeckLink() {
   if (!state.generated || !state.renderedSlides.length) return;
   const log = $("#conversation");
+  if (log.querySelector(".deck-link")) return;
   const article = document.createElement("article");
   article.className = "message assistant";
   const label = document.createElement("span");
@@ -164,6 +178,13 @@ function appendDeckLink() {
   log.scrollTop = log.scrollHeight;
 }
 
+function renderConversation() {
+  const log = $("#conversation");
+  log.replaceChildren();
+  state.messages.forEach(renderMessage);
+  if (state.generated && state.renderedSlides.length) appendDeckLink();
+}
+
 function openWorkspace() {
   if (!state.renderedSlides.length) return;
   state.workspaceOpen = true;
@@ -174,6 +195,11 @@ function closeWorkspace() {
   state.workspaceOpen = false;
   state.selectedShape = null;
   renderAll();
+}
+
+function goHome() {
+  if (state.workspaceOpen) closeWorkspace();
+  else $("#chat-prompt").focus();
 }
 
 function sourceText() {
@@ -212,9 +238,13 @@ function currentBrief() {
 function setBusy(busy, label = "") {
   state.busy = busy;
   $("#generate").disabled = busy || !state.anna;
+  $("#new-project").disabled = busy;
   $("#attach-template").disabled = busy;
   $("#attach-sources").disabled = busy;
   $("#apply-annotation").disabled = busy || !state.selectedShape || !state.generated || !state.anna;
+  document.querySelectorAll(".task-item").forEach((button) => {
+    button.disabled = busy;
+  });
   document.body.classList.toggle("busy", busy);
   if (label) setStatus(label);
 }
@@ -247,6 +277,142 @@ async function idbSet(key, value) {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+}
+
+function createTaskId() {
+  return globalThis.crypto?.randomUUID?.()
+    || `task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function currentTaskTitle() {
+  const title = String(state.deck?.title || "").trim();
+  if (title && !/^untitled/i.test(title)) return title;
+  const prompt = String(state.prompt || $("#chat-prompt")?.value || "").trim();
+  return prompt ? prompt.slice(0, 44) : "New presentation";
+}
+
+function touchTask() {
+  if (!state.taskId) return;
+  const summary = {
+    id: state.taskId,
+    title: currentTaskTitle(),
+    generated: Boolean(state.generated),
+    slideCount: state.renderedSlides.length,
+    updatedAt: new Date().toISOString(),
+  };
+  state.tasks = [summary, ...state.tasks.filter((task) => task.id !== state.taskId)];
+}
+
+function renderTaskSidebar() {
+  const list = $("#task-list");
+  if (!list) return;
+  list.replaceChildren();
+  for (const task of state.tasks) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `task-item ${task.id === state.taskId ? "active" : ""}`.trim();
+    button.disabled = state.busy;
+    button.setAttribute("aria-current", task.id === state.taskId ? "page" : "false");
+    const title = document.createElement("strong");
+    title.textContent = task.title || "New presentation";
+    const meta = document.createElement("span");
+    meta.textContent = task.generated
+      ? `${task.slideCount || 0} slides`
+      : "Draft";
+    const updated = document.createElement("small");
+    const date = task.updatedAt ? new Date(task.updatedAt) : null;
+    updated.textContent = date && !Number.isNaN(date.getTime())
+      ? date.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "";
+    button.append(title, meta, updated);
+    button.addEventListener("click", () => void switchTask(task.id));
+    list.appendChild(button);
+  }
+}
+
+function resetTaskState({ announce = true, taskId = createTaskId() } = {}) {
+  state.taskId = taskId;
+  state.deck = createDeck({
+    title: "Untitled deck",
+    slides: [
+      { ...createSlide("cover"), title: "New presentation" },
+      { ...createSlide("bullets"), title: "Key message" },
+      { ...createSlide("closing"), title: "Decision" },
+    ],
+  });
+  state.prompt = "";
+  state.sources = [];
+  state.templateBytes = null;
+  state.templateInfo = null;
+  state.renderedSlides = [];
+  state.pptxBytes = null;
+  state.selectedShape = null;
+  state.activeSlideIndex = 0;
+  state.generated = false;
+  state.workspaceOpen = false;
+  state.requestedSlideCount = null;
+  state.requestedLanguage = "";
+  state.requestedTone = "";
+  state.messages = announce ? [{ author: "Anna", text: WELCOME_MESSAGE, tone: "" }] : [];
+  $("#chat-prompt").value = "";
+  renderConversation();
+}
+
+async function applyTaskRecord(record) {
+  if (!record?.deck || !isDeck(record.deck)) return false;
+  state.taskId = record.taskId || state.taskId;
+  state.deck = normalizeDeck(record.deck);
+  state.prompt = String(record.prompt || "");
+  state.sources = Array.isArray(record.sources) ? record.sources : [];
+  state.templateInfo = record.templateInfo || null;
+  state.templateBytes = record.templateBytes ? new Uint8Array(record.templateBytes) : null;
+  state.pptxBytes = record.pptxBytes ? new Uint8Array(record.pptxBytes) : null;
+  state.generated = Boolean(record.generated);
+  state.workspaceOpen = false;
+  state.selectedShape = null;
+  state.activeSlideIndex = Number(record.activeSlideIndex || 0);
+  state.requestedSlideCount = Number(record.requestedSlideCount) || null;
+  state.requestedLanguage = String(record.requestedLanguage || "");
+  state.requestedTone = String(record.requestedTone || "");
+  state.messages = Array.isArray(record.messages) && record.messages.length
+    ? record.messages.map((message) => ({
+      author: message.author === "You" ? "You" : "Anna",
+      text: String(message.text || ""),
+      tone: String(message.tone || ""),
+    }))
+    : [{ author: "Anna", text: WELCOME_MESSAGE, tone: "" }];
+  $("#chat-prompt").value = state.prompt;
+  $("#theme-select").value = state.deck.theme || "executive";
+
+  if (state.pptxBytes) {
+    await renderBytes(state.pptxBytes, state.generated);
+  } else if (state.generated && state.deck?.slides?.length) {
+    const engine = await loadOfficeEngine();
+    const built = state.templateBytes
+      ? await engine.buildFromTemplate(state.templateBytes, state.deck)
+      : null;
+    const buffer = built?.bytes || await createPptxArrayBuffer(state.deck, await loadPptxGenJS());
+    await renderBytes(buffer, true);
+  } else {
+    state.renderedSlides = [];
+    state.pptxBytes = null;
+    renderAll();
+  }
+  renderConversation();
+  return true;
+}
+
+async function switchTask(taskId) {
+  if (!taskId || taskId === state.taskId || state.busy) return;
+  clearTimeout(state.saveTimer);
+  await saveDraft();
+  const record = await idbGet(`${TASK_STORAGE_PREFIX}${taskId}`);
+  if (!record) return;
+  await applyTaskRecord(record);
+  touchTask();
+  renderTaskSidebar();
+  await idbSet(ACTIVE_TASK_KEY, state.taskId);
+  renderAll();
 }
 
 function svgElement(svgText) {
@@ -393,9 +559,7 @@ function renderAttachments() {
     chip.append(icon, copy, remove);
     host.appendChild(chip);
   });
-  setText($("#project-label"), state.deck.title || "Untitled project");
   setText($("#deck-title-label"), state.deck.title || "Untitled deck");
-  $("#mode-badge").textContent = state.anna ? (state.templateInfo ? "Template mode" : "Anna connected") : "Local studio";
 }
 
 function renderTemplateSummary() {
@@ -416,6 +580,7 @@ function renderTemplateSummary() {
 }
 
 function renderAll() {
+  renderTaskSidebar();
   renderAttachments();
   const viewer = $("#viewer-panel");
   viewer.hidden = !state.workspaceOpen;
@@ -474,36 +639,21 @@ async function loadExample(announce = true) {
     appendMessage("Anna", "已载入一份示例演示文稿。打开后可以逐页预览并点击元素批注。");
     appendDeckLink();
   }
+  touchTask();
+  renderTaskSidebar();
   scheduleSave();
 }
 
-function newProject({ announce = true, persist = true } = {}) {
-  state.deck = createDeck({
-    title: "Untitled deck",
-    slides: [
-      { ...createSlide("cover"), title: "New presentation" },
-      { ...createSlide("bullets"), title: "Key message" },
-      { ...createSlide("closing"), title: "Decision" },
-    ],
-  });
-  state.prompt = "";
-  state.sources = [];
-  state.templateBytes = null;
-  state.templateInfo = null;
-  state.renderedSlides = [];
-  state.pptxBytes = null;
-  state.selectedShape = null;
-  state.activeSlideIndex = 0;
-  state.generated = false;
-  state.workspaceOpen = false;
-  state.requestedSlideCount = null;
-  state.requestedLanguage = "";
-  state.requestedTone = "";
-  $("#chat-prompt").value = "";
-  $("#conversation").replaceChildren();
-  if (announce) appendMessage("Anna", "上传模板和资料，然后直接描述你要生成的演示文稿。");
+async function newProject({ announce = true, persist = true } = {}) {
+  if (state.busy) return;
+  if (persist && state.taskId) {
+    clearTimeout(state.saveTimer);
+    await saveDraft();
+  }
+  resetTaskState({ announce });
+  touchTask();
   renderAll();
-  if (persist) scheduleSave();
+  if (persist) await saveDraft();
 }
 
 async function importTemplate(file) {
@@ -596,6 +746,7 @@ async function generate() {
     setStatus("当前是本地预览模式；请从 Anna 平台打开 App 后生成。", "error");
     return;
   }
+  state.prompt = prompt;
   appendMessage("You", prompt);
   setBusy(true, "Anna 正在规划内容并填充模板…");
   try {
@@ -611,6 +762,8 @@ async function generate() {
     state.deck = result.deck;
     state.activeSlideIndex = 0;
     state.selectedShape = null;
+    touchTask();
+    renderTaskSidebar();
 
     let buffer;
     if (state.templateBytes) {
@@ -623,14 +776,13 @@ async function generate() {
     }
     await renderBytes(buffer, true);
     const quota = Number(result.quotaConsumed || 0);
-    setText($("#quota-badge"), quota ? `Quota ${quota.toFixed(3)}` : `Model ${result.model || "Anna AI"}`);
-    $("#quota-badge").hidden = false;
+    const usage = quota ? ` 用量 ${quota.toFixed(3)} CU。` : "";
     const warningSummary = summarizeGenerationWarnings(result.warnings);
     if (result.warnings.length) console.warn("[ProofDeck] generation warnings", result.warnings);
     const warning = warningSummary ? ` ${warningSummary}` : "";
     appendMessage(
       "Anna",
-      `已生成 ${result.deck.slides.length} 页。模型：${result.model || "Anna AI"}。${warning}`,
+      `已生成 ${result.deck.slides.length} 页。模型：${result.model || "Anna AI"}。${warning}${usage}`,
       result.warnings.length ? "warning" : ""
     );
     appendDeckLink();
@@ -638,6 +790,8 @@ async function generate() {
       warningSummary ? `生成完成。${warningSummary}` : "生成完成。打开对话中的演示文稿即可预览和批注。",
       result.warnings.length ? "warning" : "success"
     );
+    touchTask();
+    renderTaskSidebar();
     scheduleSave();
   } catch (error) {
     const message = formatGenerationError(error);
@@ -694,12 +848,8 @@ async function applyAnnotation() {
     renderSlidePreview();
     selectShape(target.shapeId);
     setStatus(planned.reply, "success");
-    appendMessage("Anna", planned.reply);
     const quota = Number(planned.quotaConsumed || 0);
-    if (quota) {
-      setText($("#quota-badge"), `Quota ${quota.toFixed(3)}`);
-      $("#quota-badge").hidden = false;
-    }
+    appendMessage("Anna", quota ? `${planned.reply}（用量 ${quota.toFixed(3)} CU）` : planned.reply);
     scheduleSave();
   } catch (error) {
     const message = formatGenerationError(error);
@@ -732,7 +882,10 @@ async function exportDeck() {
 }
 
 async function saveDraft() {
+  if (!state.taskId) return;
+  touchTask();
   const record = {
+    taskId: state.taskId,
     deck: clone(state.deck),
     prompt: $("#chat-prompt").value,
     sources: state.sources,
@@ -740,10 +893,19 @@ async function saveDraft() {
     templateBytes: state.templateBytes,
     pptxBytes: state.pptxBytes,
     generated: state.generated,
+    activeSlideIndex: state.activeSlideIndex,
+    requestedSlideCount: state.requestedSlideCount,
+    requestedLanguage: state.requestedLanguage,
+    requestedTone: state.requestedTone,
+    messages: clone(state.messages),
     savedAt: new Date().toISOString(),
   };
   try {
+    await idbSet(`${TASK_STORAGE_PREFIX}${state.taskId}`, record);
+    await idbSet(TASK_LIST_KEY, state.tasks);
+    await idbSet(ACTIVE_TASK_KEY, state.taskId);
     await idbSet("current", record);
+    renderTaskSidebar();
   } catch {
     // The app remains usable when IndexedDB is unavailable.
   }
@@ -766,41 +928,54 @@ function scheduleSave() {
 
 async function restoreDraft() {
   try {
-    const record = await idbGet("current");
-    if (record?.deck && isDeck(record.deck)) {
-      state.deck = normalizeDeck(record.deck);
-      state.prompt = String(record.prompt || "");
-      state.sources = Array.isArray(record.sources) ? record.sources : [];
-      state.templateInfo = record.templateInfo || null;
-      state.templateBytes = record.templateBytes ? new Uint8Array(record.templateBytes) : null;
-      state.pptxBytes = record.pptxBytes ? new Uint8Array(record.pptxBytes) : null;
-      state.generated = Boolean(record.generated);
-      $("#chat-prompt").value = state.prompt;
-      if (state.pptxBytes) {
-        await renderBytes(state.pptxBytes, state.generated);
-      } else if (state.generated && state.deck?.slides?.length) {
-        const engine = await loadOfficeEngine();
-        const built = state.templateBytes
-          ? await engine.buildFromTemplate(state.templateBytes, state.deck)
-          : null;
-        const buffer = built?.bytes || await createPptxArrayBuffer(state.deck, await loadPptxGenJS());
-        await renderBytes(buffer, true);
-      } else if (state.templateBytes) {
-        await renderBytes(state.templateBytes, false);
+    const savedTasks = await idbGet(TASK_LIST_KEY);
+    if (Array.isArray(savedTasks) && savedTasks.length) {
+      state.tasks = savedTasks.filter((task) => task?.id);
+      const activeId = await idbGet(ACTIVE_TASK_KEY);
+      const candidates = [
+        activeId,
+        ...state.tasks.map((task) => task.id),
+      ].filter(Boolean);
+      for (const taskId of [...new Set(candidates)]) {
+        const record = await idbGet(`${TASK_STORAGE_PREFIX}${taskId}`);
+        if (!record?.deck || !isDeck(record.deck)) continue;
+        state.taskId = taskId;
+        if (await applyTaskRecord(record)) {
+          touchTask();
+          renderTaskSidebar();
+          return true;
+        }
       }
-      return true;
     }
   } catch {
-    // Fall through to the Anna draft or demo.
+    // Fall back to the legacy single-project record.
+  }
+
+  try {
+    const record = await idbGet("current");
+    if (record?.deck && isDeck(record.deck)) {
+      state.taskId = record.taskId || createTaskId();
+      if (await applyTaskRecord({ ...record, taskId: state.taskId })) {
+        touchTask();
+        await saveDraft();
+        return true;
+      }
+    }
+  } catch {
+    // Fall through to the Anna draft.
   }
 
   if (state.anna?.storage?.get) {
     try {
       const result = await state.anna.storage.get({ key: STORAGE_KEY });
       if (isDeck(result?.value)) {
+        state.taskId = createTaskId();
         state.deck = normalizeDeck(result.value);
         const buffer = await createPptxArrayBuffer(state.deck, await loadPptxGenJS());
         await renderBytes(buffer, true);
+        state.messages = [{ author: "Anna", text: WELCOME_MESSAGE, tone: "" }];
+        renderConversation();
+        touchTask();
         return true;
       }
     } catch {
@@ -853,7 +1028,14 @@ function bind() {
   $("#generate").addEventListener("click", generate);
   $("#export").addEventListener("click", exportDeck);
   $("#new-project").addEventListener("click", newProject);
+  $("#home-button").addEventListener("click", goHome);
   $("#close-viewer").addEventListener("click", closeWorkspace);
+  $("#chat-prompt").addEventListener("input", (event) => {
+    state.prompt = event.target.value;
+    touchTask();
+    renderTaskSidebar();
+    scheduleSave();
+  });
   $("#load-example").addEventListener("click", () => loadExample(true));
   $("#attach-template").addEventListener("click", () => $("#template-file").click());
   $("#attach-sources").addEventListener("click", () => $("#source-files").click());
@@ -907,8 +1089,8 @@ async function main() {
   bind();
   await connectAnna();
   const restored = await restoreDraft();
-  if (!restored) newProject({ announce: true, persist: false });
-  if (restored && state.generated && state.renderedSlides.length) appendDeckLink();
+  if (!restored) await newProject({ announce: true, persist: false });
+  if (restored) renderConversation();
   setBusy(false);
   renderAll();
 }

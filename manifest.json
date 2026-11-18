@@ -2,7 +2,7 @@
   "schema": 4,
   "required_executas": [],
   "optional_executas": [],
-  "system_prompt_addendum": "ProofDeck creates editable presentations from a prompt, source files, and an optional PowerPoint template. When the user asks to create or revise a deck, open the main view and pass their topic, audience, purpose, language, slide count, tone, and complete source text as entry_payload. Do not write the deck in chat. The app handles template-faithful generation, slide preview, selected-element AI edits, and PPTX export.",
+  "system_prompt_addendum": "ProofDeck creates editable presentations from a prompt, source files, and an optional PowerPoint template. When the user asks to create or revise a deck, open the main view and pass their topic, audience, purpose, language, slide count, tone, and complete source text as entry_payload. Do not write the deck in chat. The app handles separate presentation tasks, template-faithful generation, slide preview, selected-element AI edits, and PPTX export.",
   "tags": [
     "presentation",
     "ppt",

@@ -4,7 +4,7 @@
 
 # ProofDeck
 
-ProofDeck is an Anna App that turns a short brief, source documents, and an optional PowerPoint template into an editable presentation. The first screen is a clean chat with one model selector. Attach material, describe the deck, and generate. A presentation link appears in the conversation only after the deck is ready; opening that link enters the split preview and annotation workspace.
+ProofDeck is an Anna App that turns a short brief, source documents, and an optional PowerPoint template into an editable presentation. Its Codex-style workspace keeps separate presentation tasks in a left sidebar. Each task opens as a clean chat with one model selector. Attach material, describe the deck, and generate. A presentation link appears in the conversation only after the deck is ready; opening that link enters the split preview and annotation workspace.
 
 ![ProofDeck generating a deck from an uploaded PowerPoint template](docs/proofdeck-ui.png)
 
@@ -28,6 +28,7 @@ The product is intentionally narrow:
 - Upload a `.pptx` template and inspect its slide count, layouts, masters, fonts, and components.
 - Upload PDF, DOCX, TXT, and Markdown source files or paste requirements in the prompt.
 - Choose the preferred Anna model directly in the composer. Language, slide count, tone, layout, and writing goals stay in the natural-language prompt.
+- Create and switch between independent tasks. Each task retains its own conversation, prompt, attachments, generated deck, and preview state.
 - Generate 6, 8, or 10 presentation slides in one Anna `llm.complete` request.
 - Preserve source references such as `S1` and `S2`; invalid model-created references are removed.
 - Browse all generated slides in a filmstrip or full-screen presentation mode.
@@ -38,11 +39,12 @@ The product is intentionally narrow:
 
 ## Interaction flow
 
-1. The App opens as a single, full-width conversation. No empty slide canvas or disabled preview is shown.
-2. Template and source files appear as compact attachments inside the composer.
-3. After successful generation, Anna replies with a clickable presentation card showing the deck title and slide count.
-4. Opening the card reveals the existing left-chat/right-presentation workspace.
-5. A back button returns to the conversation without discarding the deck.
+1. The App opens with a task sidebar and a single full-width conversation. No empty slide canvas or disabled preview is shown.
+2. `＋` creates a separate task. Selecting a task restores its own conversation, files, template, and deck.
+3. Template and source files appear as compact attachments inside the composer.
+4. After successful generation, Anna replies with a clickable presentation card showing the deck title and slide count.
+5. Opening the card reveals the left-chat/right-presentation workspace.
+6. A back button returns to the conversation without discarding the deck.
 
 ## Template reuse
 
@@ -91,7 +93,7 @@ Generation and annotation requests both display the actual returned model and qu
 - The only automatic retry is a narrow compatibility retry for providers that explicitly require reasoning.
 - Source upload and text extraction happen locally in the browser.
 
-The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final chat-first flow are recorded for `v0.2.2`.
+The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final multi-task chat flow are recorded for `v0.2.3`.
 
 ## Run locally
 

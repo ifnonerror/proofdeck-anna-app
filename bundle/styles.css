@@ -83,9 +83,9 @@ summary:focus-visible {
 }
 
 .topbar {
-  display: grid;
-  grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 18px;
   min-height: 66px;
   padding: 11px 18px;
@@ -98,6 +98,11 @@ summary:focus-visible {
   display: flex;
   align-items: center;
   gap: 11px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
 }
 
 .brand-mark {
@@ -129,16 +134,6 @@ summary:focus-visible {
   font-size: 11px;
 }
 
-.project-label {
-  max-width: 38vw;
-  overflow: hidden;
-  color: #3a4351;
-  font-size: 12px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .topbar-actions,
 .viewer-actions,
 .composer-actions,
@@ -151,6 +146,116 @@ summary:focus-visible {
 
 .topbar-actions {
   justify-content: flex-end;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.task-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 16px 10px 12px;
+  border-right: 1px solid rgba(23, 32, 51, 0.1);
+  background: rgba(247, 243, 234, 0.72);
+}
+
+.task-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 5px 12px;
+}
+
+.task-sidebar-head strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+.new-task-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.new-task-button:hover {
+  border-color: rgba(201, 94, 56, 0.55);
+  color: var(--accent);
+}
+
+.task-list {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.task-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #394251;
+  background: transparent;
+  text-align: left;
+}
+
+.task-item:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.task-item.active {
+  border-color: rgba(201, 94, 56, 0.22);
+  color: var(--ink);
+  background: #fffaf3;
+  box-shadow: 0 5px 18px rgba(47, 36, 20, 0.06);
+}
+
+.task-item strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-item > span,
+.task-item small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.task-item > span {
+  grid-column: 2;
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+.task-item small {
+  grid-column: 1 / -1;
+}
+
+.task-sidebar-note {
+  margin: 12px 5px 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
 }
 
 .badge,
@@ -176,6 +281,10 @@ summary:focus-visible {
   min-height: 0;
   padding: 12px;
   gap: 12px;
+}
+
+.studio.workspace-active {
+  grid-template-columns: minmax(310px, 360px) minmax(0, 1fr);
 }
 
 .studio.chat-only {
@@ -590,6 +699,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 13px 16px;
   border-bottom: 1px solid var(--viewer-line);
@@ -611,6 +721,14 @@ select {
 
 .viewer-actions {
   justify-content: flex-end;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+}
+
+.viewer-actions .button,
+.viewer-actions select {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .viewer-actions select {
@@ -914,11 +1032,34 @@ body.busy .composer {
     overflow: auto;
   }
 
-  .topbar {
-    grid-template-columns: 1fr auto;
+  .app-body {
+    display: block;
+    min-height: calc(100dvh - 66px);
   }
 
-  .project-label {
+  .task-sidebar {
+    display: block;
+    padding: 10px 12px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(23, 32, 51, 0.1);
+  }
+
+  .task-sidebar-head {
+    padding: 0 0 9px;
+  }
+
+  .task-list {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+  }
+
+  .task-item {
+    min-width: 190px;
+  }
+
+  .task-sidebar-note {
     display: none;
   }
 
@@ -939,10 +1080,6 @@ body.busy .composer {
 @media (max-width: 720px) {
   .topbar {
     padding: 10px 12px;
-  }
-
-  .topbar-actions .badge {
-    display: none;
   }
 
   .studio {

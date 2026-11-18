@@ -10,11 +10,11 @@ Environment:
 - App: ProofDeck
 - App ID: `274`
 - Slug: `proofdeck-ai`
-- Review candidate: `v0.2.2` (`version_id=666`)
+- Review candidate: `v0.2.3` (`version_id=667`)
 
 ## Automated gates
 
-- `npm test`: 29 tests passed.
+- `npm test`: 31 tests passed.
 - `npm run smoke`: produced an eight-slide fallback deck with eight notes and a valid 16:9 package.
 - OfficeKit smoke: produced an eight-slide deck from a real `.pptx`, with shape-aware SVG output.
 - `npm run validate`: Anna schema 4 strict validation passed.
@@ -50,6 +50,9 @@ Browser acceptance used Microsoft Edge through `playwright-core` and both mock a
 | Reload with a completed deck | Passed; restores into chat with the link instead of opening the viewer |
 | Slide thumbnail row layout | Passed; each 16:9 thumbnail reserves its full height and never overlaps the next slide |
 | Compact generation status | Passed; source-reference cleanup is summarized instead of printing every warning below the composer |
+| Multi-task sidebar | Passed; separate tasks retain their own prompt, template, conversation and generated deck |
+| Task switching | Passed; switching between two projects restores the correct content without mixing state |
+| Task-list reload | Passed; both tasks and the active task survive a page reload |
 | Shape inspection and click-to-select | Passed |
 | Selected-element AI patch | Passed with real Anna model |
 | Export after AI patch | Passed; valid PPTX with 8 slides and 8 notes |
@@ -71,6 +74,8 @@ PASS back to chat closes the workspace
 PASS reload restores into chat with the presentation link
 PASS slide thumbnails have 8px gaps and no overlap
 PASS warning text is compact
+PASS task sidebar creates and selects separate projects
+PASS prompt, attachment and deck state remain isolated per task
 PASS 720px layout has no horizontal overflow
 PASS no page errors
 ```
@@ -130,13 +135,13 @@ GPT-5 Mini, Kimi K2.5, and MiniMax M2.7 exposed mandatory-reasoning errors durin
 
 ## Publishing state
 
-`v0.2.2` was uploaded and cut successfully:
+`v0.2.3` was uploaded and cut successfully:
 
-- Remote working draft revision: `10`.
-- Bundle: 25 files, approximately 3.44 MB.
-- Immutable review version: `v0.2.2`, `version_id=666`.
+- Remote working draft revision: `11`.
+- Bundle: 25 files, approximately 3.43 MB.
+- Immutable review version: `v0.2.3`, `version_id=667`.
 - App status after submission: `pending_review`.
-- Review pin: `v0.2.2`.
+- Review pin: `v0.2.3`.
 
 The Anna web login requires a Cloudflare Turnstile human check in a fresh browser session. The real model acceptance therefore used the same saved Anna PAT and real `anna-runtime` bridge from the App's local Harness. The platform package is installed and pinned for review; a reviewer can install the `0.0.0-draft` version from the Developer Console after human verification.
 

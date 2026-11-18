@@ -22,6 +22,20 @@ test("only the model chooser remains in the composer", () => {
   assert.match(html, /class="model-picker"[\s\S]+id="brief-model"/);
 });
 
+test("top bar contains only actionable controls", () => {
+  assert.match(html, /id="home-button" class="brand"/);
+  assert.match(html, /id="new-project"/);
+  assert.doesNotMatch(html, /project-label|mode-badge|quota-badge/);
+});
+
+test("task sidebar supports switching independently persisted projects", () => {
+  assert.match(html, /class="task-sidebar"/);
+  assert.match(html, /id="task-list"/);
+  assert.match(app, /TASK_LIST_KEY/);
+  assert.match(app, /async function switchTask/);
+  assert.match(app, /messages: clone\(state\.messages\)/);
+});
+
 test("slide thumbnails reserve their full aspect-ratio height", () => {
   assert.match(styles, /\.slide-filmstrip\s*\{[\s\S]*grid-auto-rows:\s*max-content/);
   assert.match(styles, /\.filmstrip-item\s*\{[\s\S]*height:\s*auto[\s\S]*aspect-ratio:\s*16\s*\/\s*9/);
