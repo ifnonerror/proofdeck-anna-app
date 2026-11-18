@@ -10,7 +10,7 @@ Environment:
 - App: ProofDeck
 - App ID: `274`
 - Slug: `proofdeck-ai`
-- Review candidate: `v0.2.6` (`version_id=670`)
+- Review candidate: `v0.2.7` (`version_id=671`)
 
 ## Automated gates
 
@@ -56,7 +56,7 @@ Browser acceptance used Microsoft Edge through `playwright-core` and both mock a
 | Generation without a template | Passed with real Anna; 6 built-in-layout slides, no template attachment, valid PPTX export |
 | Direct manual editing | Passed; text, size, color, bold, and italic changes are written to the PPTX without an LLM call |
 | Model settings entry | Passed; the fake model dropdown was removed and replaced by a clickable entry to Anna's account model settings |
-| Account-model refresh after settings change | Passed; returning from Anna settings updated the client from the placeholder to `Claude Opus 4.5` |
+| Account-model refresh after settings change | Passed; app startup and return from Anna settings updated the client to `Claude Opus 5` |
 | Shape inspection and click-to-select | Passed |
 | Selected-element AI patch | Passed with real Anna model |
 | Export after AI patch | Passed; valid PPTX with 8 slides and 8 notes |
@@ -123,7 +123,7 @@ The real acceptance run used Anna's staging model bridge with the `proofdeck` de
 
 Known successful real-model usage for template generation and element editing was `0.629 CU`. A pre-fix `v0.2.1` acceptance also completed successfully for `0.241 CU`; it was used only to reproduce the thumbnail bug. A template-free real run also succeeded. Five additional 6-page tests selected MiMo, Qwen, Claude, Gemini, and GPT in the UI; all completed but Anna returned `xiaomi/mimo-v2.5` for every call. The platform therefore does not allow an App to override the user's account-selected model.
 
-Quota consumption from earlier generation-only validation was approximately `82.18 CU`. After the additional model-selection checks, `anna.llm.catalog()` reported exactly `914.94 CU` remaining. The account-model refresh probe used approximately `0.125 CU`, leaving approximately `914.815 CU`.
+Quota consumption from earlier generation-only validation was approximately `82.18 CU`. After the additional model-selection checks and account-model refresh probes, `anna.llm.catalog()` reported approximately `914.21 CU` remaining.
 
 ## Historical cross-model generation checks
 
@@ -141,13 +141,13 @@ GPT-5 Mini, Kimi K2.5, and MiniMax M2.7 exposed mandatory-reasoning errors durin
 
 ## Publishing state
 
-`v0.2.6` was uploaded and cut successfully:
+`v0.2.7` was uploaded and cut successfully:
 
-- Remote working draft revision: `14`.
+- Remote working draft revision: `15`.
 - Bundle: 25 files, approximately 3.43 MB.
-- Immutable review version: `v0.2.6`, `version_id=670`.
+- Immutable review version: `v0.2.7`, `version_id=671`.
 - App status after submission: `pending_review`.
-- Review pin: `v0.2.6`.
+- Review pin: `v0.2.7`.
 
 The Anna web login requires a Cloudflare Turnstile human check in a fresh browser session. The real model acceptance therefore used the same saved Anna PAT and real `anna-runtime` bridge from the App's local Harness. The platform package is installed and pinned for review; a reviewer can install the `0.0.0-draft` version from the Developer Console after human verification.
 

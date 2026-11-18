@@ -30,6 +30,7 @@ const WELCOME_MESSAGE = "上传资料和可选模板，然后直接描述你要�
 const MODEL_LABELS = {
   "xiaomi/mimo-v2.5": "MiMo v2.5",
   "anthropic/claude-opus-4.5": "Claude Opus 4.5",
+  "anthropic/claude-opus-5": "Claude Opus 5",
   "anthropic/claude-sonnet-4.5": "Claude Sonnet 4.5",
   "google/gemini-3.5-flash": "Gemini 3.5 Flash",
   "openai/gpt-5-mini": "GPT-5 Mini",
@@ -220,6 +221,17 @@ function setCurrentModel(modelName, displayName = "") {
   setText($("#current-model-label"), state.modelDisplayName || "Anna account model");
 }
 
+async function resolveModelDisplayName(modelName) {
+  if (!modelName) return "";
+  if (MODEL_LABELS[modelName]) return MODEL_LABELS[modelName];
+  try {
+    const catalog = await state.anna?.llm?.catalog?.();
+    return catalog?.models?.find((model) => model.modelName === modelName)?.displayName || "";
+  } catch {
+    return "";
+  }
+}
+
 async function refreshCurrentModel() {
   if (!state.anna?.llm?.complete || modelProbePromise) return modelProbePromise;
   modelProbePromise = (async () => {
@@ -230,7 +242,7 @@ async function refreshCurrentModel() {
         temperature: 0,
         thinking: false,
       }, { timeoutMs: 30000 });
-      setCurrentModel(reply.model);
+      setCurrentModel(reply.model, await resolveModelDisplayName(reply.model));
       state.pendingModelRefresh = false;
       setStatus(`当前 Anna 模型：${state.modelDisplayName}`, "success");
       scheduleSave();
@@ -887,7 +899,7 @@ async function generate() {
     result.deck.sourceText = brief.sourceText;
     result.deck.language = brief.language;
     state.deck = result.deck;
-    setCurrentModel(result.model || state.modelHint);
+    setCurrentModel(result.model || state.modelHint, await resolveModelDisplayName(result.model));
     state.activeSlideIndex = 0;
     state.selectedShape = null;
     touchTask();
@@ -1244,6 +1256,7 @@ async function main() {
   const restored = await restoreDraft();
   if (!restored) await newProject({ announce: true, persist: false });
   if (restored) renderConversation();
+  await refreshCurrentModel();
   setBusy(false);
   renderAll();
 }
