@@ -29,6 +29,10 @@ function shapeInfo(pres, shape) {
     text,
     bounds: pptx.getShapeBounds(shape),
     fontSize: Number(format?.size || 0),
+    font: format?.font || "",
+    color: format?.color || "",
+    bold: Boolean(format?.bold),
+    italic: Boolean(format?.italic),
   };
 }
 
