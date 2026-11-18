@@ -100,6 +100,23 @@ function setExportStatus(text, tone = "") {
   node.dataset.tone = tone;
 }
 
+function summarizeGenerationWarnings(warnings = []) {
+  let invalidReferences = 0;
+  const messages = [];
+  for (const warning of warnings) {
+    const text = String(warning || "");
+    const marker = "移除了不存在的来源：";
+    if (text.includes(marker)) {
+      const refs = text.slice(text.indexOf(marker) + marker.length);
+      invalidReferences += refs.split(/[，,]/).filter(Boolean).length;
+    } else if (text) {
+      messages.push(text);
+    }
+  }
+  if (invalidReferences) messages.unshift(`已自动清理 ${invalidReferences} 个无效来源引用`);
+  return messages.join("；");
+}
+
 function appendMessage(author, text, tone = "") {
   const log = $("#conversation");
   const article = document.createElement("article");
@@ -608,7 +625,9 @@ async function generate() {
     const quota = Number(result.quotaConsumed || 0);
     setText($("#quota-badge"), quota ? `Quota ${quota.toFixed(3)}` : `Model ${result.model || "Anna AI"}`);
     $("#quota-badge").hidden = false;
-    const warning = result.warnings.length ? ` ${result.warnings.join("；")}` : "";
+    const warningSummary = summarizeGenerationWarnings(result.warnings);
+    if (result.warnings.length) console.warn("[ProofDeck] generation warnings", result.warnings);
+    const warning = warningSummary ? ` ${warningSummary}` : "";
     appendMessage(
       "Anna",
       `已生成 ${result.deck.slides.length} 页。模型：${result.model || "Anna AI"}。${warning}`,
@@ -616,7 +635,7 @@ async function generate() {
     );
     appendDeckLink();
     setStatus(
-      result.warnings.length ? `生成完成，需注意：${result.warnings.join("；")}` : "生成完成。打开对话中的演示文稿即可预览和批注。",
+      warningSummary ? `生成完成。${warningSummary}` : "生成完成。打开对话中的演示文稿即可预览和批注。",
       result.warnings.length ? "warning" : "success"
     );
     scheduleSave();

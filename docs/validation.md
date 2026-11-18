@@ -10,11 +10,11 @@ Environment:
 - App: ProofDeck
 - App ID: `274`
 - Slug: `proofdeck-ai`
-- Next review candidate: `v0.2.1`
+- Review candidate: `v0.2.2` (`version_id=666`)
 
 ## Automated gates
 
-- `npm test`: 27 tests passed.
+- `npm test`: 29 tests passed.
 - `npm run smoke`: produced an eight-slide fallback deck with eight notes and a valid 16:9 package.
 - OfficeKit smoke: produced an eight-slide deck from a real `.pptx`, with shape-aware SVG output.
 - `npm run validate`: Anna schema 4 strict validation passed.
@@ -48,6 +48,8 @@ Browser acceptance used Microsoft Edge through `playwright-core` and both mock a
 | Opening the presentation link | Passed; reveals the left-chat/right-presentation workspace |
 | Returning to chat | Passed; closes the viewer and preserves the generated link |
 | Reload with a completed deck | Passed; restores into chat with the link instead of opening the viewer |
+| Slide thumbnail row layout | Passed; each 16:9 thumbnail reserves its full height and never overlaps the next slide |
+| Compact generation status | Passed; source-reference cleanup is summarized instead of printing every warning below the composer |
 | Shape inspection and click-to-select | Passed |
 | Selected-element AI patch | Passed with real Anna model |
 | Export after AI patch | Passed; valid PPTX with 8 slides and 8 notes |
@@ -67,6 +69,8 @@ PASS presentation link opens 8 template slides
 PASS stale RRSI body copy is absent
 PASS back to chat closes the workspace
 PASS reload restores into chat with the presentation link
+PASS slide thumbnails have 8px gaps and no overlap
+PASS warning text is compact
 PASS 720px layout has no horizontal overflow
 PASS no page errors
 ```
@@ -104,10 +108,11 @@ The real acceptance run used Anna's staging model bridge with the `proofdeck` de
 | `xiaomi/mimo-v2.5` | Six-slide Chinese management brief from uploaded DOCX and PPTX template | Passed; 6 slides rendered, template mode retained | `0.277 CU` |
 | `xiaomi/mimo-v2.5` | Selected title: larger font and template accent color | Passed; model returned a valid single-shape patch | `0.059 CU` |
 | `xiaomi/mimo-v2.5` | Repeat selected-element patch followed by export | Passed; valid PPTX, 8 slides, 8 notes | `0.059 CU` |
+| `xiaomi/mimo-v2.5` | Post-thumbnail-fix six-slide RRSI report from the supplied template | Passed; 6 slides, valid export, no thumbnail overlap | `0.234 CU` |
 
-Known successful real-model usage for this release was `0.395 CU`. An earlier attempt to force `qwen3.8-flash` produced no response before the harness was stopped after 220 seconds; its billing outcome was not observable from the client and is therefore not counted as a successful run. The account default subsequently routed the request to `xiaomi/mimo-v2.5`.
+Known successful real-model usage for template generation and element editing was `0.629 CU`. A pre-fix `v0.2.1` acceptance also completed successfully for `0.241 CU`; it was used only to reproduce the thumbnail bug. An earlier attempt to force `qwen3.8-flash` produced no response before the harness was stopped after 220 seconds; its billing outcome was not observable from the client and is therefore not counted as a successful run. The account default subsequently routed the request to `xiaomi/mimo-v2.5`.
 
-Quota consumption from earlier generation-only validation was approximately `82.18 CU`. The known successful total across development and final acceptance is therefore approximately `82.575 CU`; remaining quota is approximately `917.425 CU` before accounting for the unresolved canceled Qwen attempt.
+Quota consumption from earlier generation-only validation was approximately `82.18 CU`. Counting successful final-template and edit runs, the known successful total across development and acceptance is approximately `83.050 CU`; remaining quota is approximately `916.950 CU` before accounting for the unresolved canceled Qwen attempt.
 
 ## Historical cross-model generation checks
 
@@ -125,13 +130,13 @@ GPT-5 Mini, Kimi K2.5, and MiniMax M2.7 exposed mandatory-reasoning errors durin
 
 ## Publishing state
 
-`v0.2.1` was uploaded and cut successfully:
+`v0.2.2` was uploaded and cut successfully:
 
-- Remote working draft revision: `9`.
+- Remote working draft revision: `10`.
 - Bundle: 25 files, approximately 3.44 MB.
-- Immutable review version: `v0.2.1`, `version_id=664`.
+- Immutable review version: `v0.2.2`, `version_id=666`.
 - App status after submission: `pending_review`.
-- Review pin: `v0.2.1`.
+- Review pin: `v0.2.2`.
 
 The Anna web login requires a Cloudflare Turnstile human check in a fresh browser session. The real model acceptance therefore used the same saved Anna PAT and real `anna-runtime` bridge from the App's local Harness. The platform package is installed and pinned for review; a reviewer can install the `0.0.0-draft` version from the Developer Console after human verification.
 

@@ -694,7 +694,9 @@ select {
 
 .slide-filmstrip {
   display: grid;
+  grid-auto-rows: max-content;
   align-content: start;
+  align-items: start;
   gap: 8px;
   min-height: 0;
   padding-right: 4px;
@@ -704,6 +706,8 @@ select {
 .filmstrip-item {
   position: relative;
   width: 100%;
+  height: auto;
+  min-height: 0;
   aspect-ratio: 16 / 9;
   padding: 0;
   border: 2px solid transparent;

@@ -91,7 +91,7 @@ Generation and annotation requests both display the actual returned model and qu
 - The only automatic retry is a narrow compatibility retry for providers that explicitly require reasoning.
 - Source upload and text extraction happen locally in the browser.
 
-The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final chat-first flow are recorded for `v0.2.1`.
+The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final chat-first flow are recorded for `v0.2.2`.
 
 ## Run locally
 
