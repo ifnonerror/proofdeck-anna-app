@@ -964,16 +964,6 @@ select {
   -webkit-line-clamp: 3;
 }
 
-.manual-edit-toggle {
-  margin-top: 9px;
-  padding: 4px 8px;
-  border: 1px solid var(--viewer-line);
-  border-radius: 6px;
-  color: #e4ae7d;
-  background: transparent;
-  font-size: 10px;
-}
-
 .annotation-input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

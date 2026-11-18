@@ -24,6 +24,12 @@ test("only the model chooser remains in the composer", () => {
   assert.match(html, /PPT template \(optional\)/);
 });
 
+test("model label refreshes from the Anna account after returning from settings", () => {
+  assert.match(app, /async function refreshCurrentModel/);
+  assert.match(app, /pendingModelRefresh/);
+  assert.match(app, /addEventListener\("focus"/);
+});
+
 test("top bar contains only actionable controls", () => {
   assert.match(html, /id="home-button" class="brand"/);
   assert.match(html, /id="new-project"/);
