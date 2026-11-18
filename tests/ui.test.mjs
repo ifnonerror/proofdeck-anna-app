@@ -20,6 +20,7 @@ test("chat starts without exposing the presentation workspace", () => {
 test("only the model chooser remains in the composer", () => {
   assert.doesNotMatch(html, /advanced-settings|brief-slides|brief-language|brief-tone/);
   assert.match(html, /class="model-picker"[\s\S]+id="brief-model"/);
+  assert.match(html, /PPT template \(optional\)/);
 });
 
 test("top bar contains only actionable controls", () => {

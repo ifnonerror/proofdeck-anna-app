@@ -12,6 +12,8 @@ ProofDeck is an Anna App that turns a short brief, source documents, and an opti
 
 ![ProofDeck reusing a free-form 14-slide PowerPoint template](docs/proofdeck-template-reuse.png)
 
+![ProofDeck generating with the built-in layout and no uploaded template](docs/proofdeck-no-template.png)
+
 ## Product idea
 
 Most AI presentation tools produce attractive slides but discard the organization's existing brand system. ProofDeck keeps the template as the visual source of truth. It copies real template slides instead of approximating their colors with a new deck builder, so masters, layouts, theme fonts, background artwork, logos, footers, and fixed shapes remain inside the PowerPoint package.
@@ -26,6 +28,7 @@ The product is intentionally narrow:
 ## What users can do
 
 - Upload a `.pptx` template and inspect its slide count, layouts, masters, fonts, and components.
+- Generate without a template and use ProofDeck's built-in presentation layout.
 - Upload PDF, DOCX, TXT, and Markdown source files or paste requirements in the prompt.
 - Choose the preferred Anna model directly in the composer. Language, slide count, tone, layout, and writing goals stay in the natural-language prompt.
 - Create and switch between independent tasks. Each task retains its own conversation, prompt, attachments, generated deck, and preview state.
@@ -93,7 +96,7 @@ Generation and annotation requests both display the actual returned model and qu
 - The only automatic retry is a narrow compatibility retry for providers that explicitly require reasoning.
 - Source upload and text extraction happen locally in the browser.
 
-The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final multi-task chat flow are recorded for `v0.2.3`.
+The App was developed primarily without consuming model quota. Historical cross-model generation tests from the generation-only release are preserved in [docs/validation.md](docs/validation.md); template-faithful AI acceptance and the final multi-task chat flow are recorded for `v0.2.4`.
 
 ## Run locally
 

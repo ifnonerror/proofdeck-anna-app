@@ -10,7 +10,7 @@ Environment:
 - App: ProofDeck
 - App ID: `274`
 - Slug: `proofdeck-ai`
-- Review candidate: `v0.2.3` (`version_id=667`)
+- Review candidate: `v0.2.4` (`version_id=668`)
 
 ## Automated gates
 
@@ -53,6 +53,7 @@ Browser acceptance used Microsoft Edge through `playwright-core` and both mock a
 | Multi-task sidebar | Passed; separate tasks retain their own prompt, template, conversation and generated deck |
 | Task switching | Passed; switching between two projects restores the correct content without mixing state |
 | Task-list reload | Passed; both tasks and the active task survive a page reload |
+| Generation without a template | Passed with real Anna; 6 built-in-layout slides, no template attachment, valid PPTX export |
 | Shape inspection and click-to-select | Passed |
 | Selected-element AI patch | Passed with real Anna model |
 | Export after AI patch | Passed; valid PPTX with 8 slides and 8 notes |
@@ -114,6 +115,7 @@ The real acceptance run used Anna's staging model bridge with the `proofdeck` de
 | `xiaomi/mimo-v2.5` | Selected title: larger font and template accent color | Passed; model returned a valid single-shape patch | `0.059 CU` |
 | `xiaomi/mimo-v2.5` | Repeat selected-element patch followed by export | Passed; valid PPTX, 8 slides, 8 notes | `0.059 CU` |
 | `xiaomi/mimo-v2.5` | Post-thumbnail-fix six-slide RRSI report from the supplied template | Passed; 6 slides, valid export, no thumbnail overlap | `0.234 CU` |
+| `xiaomi/mimo-v2.5` | Six-slide enterprise briefing with no template | Passed; built-in layout, 6 slides, 6 notes, no thumbnail overlap | Not exposed in this run |
 
 Known successful real-model usage for template generation and element editing was `0.629 CU`. A pre-fix `v0.2.1` acceptance also completed successfully for `0.241 CU`; it was used only to reproduce the thumbnail bug. An earlier attempt to force `qwen3.8-flash` produced no response before the harness was stopped after 220 seconds; its billing outcome was not observable from the client and is therefore not counted as a successful run. The account default subsequently routed the request to `xiaomi/mimo-v2.5`.
 
@@ -135,13 +137,13 @@ GPT-5 Mini, Kimi K2.5, and MiniMax M2.7 exposed mandatory-reasoning errors durin
 
 ## Publishing state
 
-`v0.2.3` was uploaded and cut successfully:
+`v0.2.4` was uploaded and cut successfully:
 
-- Remote working draft revision: `11`.
+- Remote working draft revision: `12`.
 - Bundle: 25 files, approximately 3.43 MB.
-- Immutable review version: `v0.2.3`, `version_id=667`.
+- Immutable review version: `v0.2.4`, `version_id=668`.
 - App status after submission: `pending_review`.
-- Review pin: `v0.2.3`.
+- Review pin: `v0.2.4`.
 
 The Anna web login requires a Cloudflare Turnstile human check in a fresh browser session. The real model acceptance therefore used the same saved Anna PAT and real `anna-runtime` bridge from the App's local Harness. The platform package is installed and pinned for review; a reviewer can install the `0.0.0-draft` version from the Developer Console after human verification.
 

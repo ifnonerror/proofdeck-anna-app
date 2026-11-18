@@ -26,7 +26,7 @@ const DB_STORE = "projects";
 const TASK_STORAGE_PREFIX = "task:";
 const TASK_LIST_KEY = "task-list";
 const ACTIVE_TASK_KEY = "active-task";
-const WELCOME_MESSAGE = "上传模板和资料，然后直接描述你要生成的演示文稿。";
+const WELCOME_MESSAGE = "上传资料和可选模板，然后直接描述你要生成的演示文稿。";
 
 const state = {
   anna: null,
